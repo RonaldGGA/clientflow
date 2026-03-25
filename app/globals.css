@@ -1,7 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui;
+}
 :root {
   --bg: #0f1117;
   --surface: #1a1d27;
@@ -14,10 +15,17 @@
   --warning: #f59e0b;
 }
 
+html {
+  font-family: var(--font-sans);
+}
+
 body {
-  @apply bg-[var(--bg)] text-[var(--text-primary)] font-sans antialiased;
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
-  @apply border-[var(--border)];
+  border-color: var(--border);
 }
