@@ -240,9 +240,10 @@ clientflow/
 ## Environment Variables
 
 ```env
+NEXT_PUBLIC_APP_URL=
 DATABASE_URL=
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=
 GOOGLE_AI_API_KEY=
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=openrouter/free
@@ -271,8 +272,8 @@ OPENROUTER_MODEL=openrouter/free
 
 - [x] Configure Better Auth with Prisma adapter and nextCookies plugin
 - [x] Set up `api/auth/[...all]` catch-all route
-- [ ] Implement `proxy.ts` for route protection and session validation
-- [ ] Build login page UI using Better Auth client
+- [x] Implement `proxy.ts` for route protection and session validation
+- [x] Build login page UI using Better Auth client
 - [ ] Implement logic to check `BusinessMember` role for route authorization
 - [ ] Redirect unauthenticated users to `/login`
 - [ ] Redirect staff away from admin-only routes
@@ -291,7 +292,9 @@ OPENROUTER_MODEL=openrouter/free
 
 ## Technical Notes
 
-- **Next.js 16 Proxy**: Switched from `middleware.ts` to `proxy.ts` following Next.js 16 standards.
+- **Proxy/Middleware**: Usar `middleware.ts` (no `proxy.ts`) por bug confirmado en Next.js 16
+  (github.com/vercel/next.js/issues/85243). El proxy solo verifica la cookie de sesión.
+  Validación profunda de roles en layouts y route handlers vía `lib/session.ts`.
 - **Better Auth**: Replaced NextAuth for framework-agnostic stability and better Next.js 16 support.
 - **Multitenancy**: Handled via `BusinessMember`. `User` does not store `businessId` or `role` directly.
 - **Prisma 7**: Leveraging latest Prisma features.
