@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Business {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users    User[]
+  clients  Client[]
+  services Service[]
+  visits   Visit[]
+  reports  Report[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Custom fields
+  password   String? // bcrypt hashed
+  role       Role      @default(STAFF)
+  businessId String? // nullable for initial better-auth creation
+  deletedAt  DateTime?
+
+  business Business? @relation(fields: [businessId], references: [id])
+  sessions Session[]
+  accounts Account[]
+  visits   Visit[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Client {
+  id         String    @id @default(cuid())
+  name       String
+  phone      String?
+  notes      String?
+  businessId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  business Business @relation(fields: [businessId], references: [id])
+  visits   Visit[]
+}
+
+model Service {
+  id         String    @id @default(cuid())
+  name       String
+  basePrice  Decimal   @db.Decimal(10, 2)
+  businessId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  business Business @relation(fields: [businessId], references: [id])
+  visits   Visit[]
+}
+
+model Visit {
+  id          String   @id @default(cuid())
+  clientId    String
+  serviceId   String
+  staffId     String
+  businessId  String
+  actualPrice Decimal  @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client   Client   @relation(fields: [clientId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+  staff    User     @relation(fields: [staffId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  businessId String
+  weekStart  DateTime
+  weekEnd    DateTime
+  content    String // LLM-generated natural language text
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
