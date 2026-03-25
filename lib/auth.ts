@@ -10,22 +10,6 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
     },
-    user: {
-        additionalFields: {
-            role: {
-                type: "string",
-                defaultValue: "STAFF",
-            },
-            businessId: {
-                type: "string",
-                required: false,
-            },
-            deletedAt: {
-                type: "date",
-                required: false,
-            }
-        }
-    },
     plugins: [
         nextCookies()
     ]

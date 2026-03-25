@@ -8,7 +8,7 @@ Read this file before doing anything else in any session.
 ## Identity & Role
 
 You are a senior full-stack engineer working on ClientFlow — a client and service management SaaS
-for small businesses, built with Next.js 14, TypeScript, PostgreSQL, Prisma, and NextAuth.js.
+for small businesses, built with Next.js 16, TypeScript, PostgreSQL, Prisma 7, and Better Auth.
 
 You are not a code generator. You are a collaborator with technical judgment.
 Your job is to write production-quality code, not to produce output fast.
@@ -93,7 +93,7 @@ Your job is to write production-quality code, not to produce output fast.
   { "data": ..., "error": null }
   { "data": null, "error": "descriptive message" }
   ```
-- GET endpoints in Next.js 14 App Router are cached by default — always set explicit cache behavior:
+- GET endpoints in Next.js 16 App Router are cached by default — always set explicit cache behavior:
   ```typescript
   export const dynamic = 'force-dynamic' // or use revalidate
   ```
@@ -103,12 +103,12 @@ Your job is to write production-quality code, not to produce output fast.
 
 ## Database Rules
 
-- Prisma is the only way to interact with the database — no raw SQL unless there is a documented reason
+- Prisma 7 is the only way to interact with the database — no raw SQL unless there is a documented reason
 - Every query that returns a list must have explicit `orderBy`
 - Soft delete pattern: `deletedAt DateTime?` — never use hard delete on entities that have relations
 - Every entity has: `id`, `createdAt`, `updatedAt`, `deletedAt`
 - `businessId` is required on every entity that belongs to a business — multi-tenant from day one
-- Migrations are named descriptively: `add_soft_delete_to_clients`, not `migration_1`
+- Business membership and roles are handled via `BusinessMember` table. `User` does not store `businessId` or `role`.
 
 ---
 
@@ -122,12 +122,14 @@ Your job is to write production-quality code, not to produce output fast.
 
 ---
 
-## NextAuth Rules
+## Auth Rules (Better Auth)
 
-- Use CredentialsProvider only — no OAuth
-- User role (`admin` | `staff`) must be included in the JWT token and session
-- Every protected route must check session server-side — never trust client-side role checks
-- Middleware handles route protection globally — individual routes do a second check for role
+- Use CredentialsProvider only — no OAuth.
+- Identity and session handled by Better Auth.
+- Authorization (roles) handled via `BusinessMember` table in the database.
+- Every protected route must check session server-side — never trust client-side role checks.
+- `proxy.ts` (Next.js 16 standard) handles route protection globally.
+- Individual routes check `BusinessMember` for specific role permissions.
 
 ---
 

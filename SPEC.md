@@ -37,53 +37,34 @@ The system is business-agnostic — the demo uses barbershop data.
 
 ## Architecture Decisions
 
-- **Multi-tenant from day 1**: every business entity has `businessId` — adding a second business later requires zero schema changes
-- **Soft delete everywhere**: `deletedAt DateTime?` on all entities with relations — historical data is never lost
-- **Price stored on visit**: service has a `basePrice`, visit stores `actualPrice` — supports discounts and price changes
-- **LLM is async with timeout**: 15s AbortController, Gemini → OpenRouter fallback, never blocks UI
-- **Design system**: dark theme only, Inter font, emerald accent (`#10b981`) — full rules in `skills/design-system.md`
-- **GET routes**: all Next.js 16 GET handlers use `export const dynamic = 'force-dynamic'` explicitly
-- **Auth Proxy**: uses `proxy.ts` (Next.js 16 standard) with full session validation in Node.js runtime
-- **Better Auth Integration**: catches all auth requests at `/api/auth/[...all]`
+- **Multi-tenant with BusinessMember**: multi-tenancy is handled via the `BusinessMember` model. A user belongs to a business through this relation, which also stores their specific `role` for that tenant.
+- **Soft delete**: `deletedAt DateTime?` on relevant entities — historical data is preserved.
+- **Price stored on visit**: service has a `basePrice`, visit stores `actualPrice` — supports discounts and price changes.
+- **LLM is async with timeout**: 15s AbortController, Gemini → OpenRouter fallback, never blocks UI.
+- **Design system**: dark theme only, Inter font, emerald accent (`#10b981`) — full rules in `skills/design-system.md`.
+- **GET routes**: all Next.js 16 GET handlers use `export const dynamic = 'force-dynamic'` explicitly.
+- **Auth Proxy**: uses `proxy.ts` (Next.js 16 standard) with full session validation in Node.js runtime.
+- **Better Auth Integration**: catches all auth requests at `/api/auth/[...all]`. Credentials login only.
 
 ---
 
 ## Database Schema
 
 ```prisma
-model Business {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  users     User[]
-  clients   Client[]
-  services  Service[]
-  visits    Visit[]
-  reports   Report[]
-}
-
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  name          String
+  name          String?
   emailVerified Boolean
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
-  // Custom fields
-  password      String?   // bcrypt hashed
-  role          Role      @default(STAFF)
-  businessId    String?   // nullable for initial better-auth creation
-  deletedAt     DateTime?
-
-  business      Business? @relation(fields: [businessId], references: [id])
+  password      String?
+  
   sessions      Session[]
   accounts      Account[]
-  visits        Visit[]
+  businessMembers BusinessMember[]
 }
 
 model Session {
@@ -122,6 +103,30 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Business {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  members   BusinessMember[]
+  clients   Client[]
+  services  Service[]
+  visits    Visit[]
+  reports   Report[]
+}
+
+model BusinessMember {
+  id         String    @id @default(cuid())
+  userId     String
+  businessId String
+  role       String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
 }
 
 model Client {
@@ -173,15 +178,10 @@ model Report {
   businessId String
   weekStart  DateTime
   weekEnd    DateTime
-  content    String    // LLM-generated natural language text
+  content    String
   createdAt  DateTime  @default(now())
 
   business   Business  @relation(fields: [businessId], references: [id])
-}
-
-enum Role {
-  ADMIN
-  STAFF
 }
 ```
 
@@ -197,73 +197,38 @@ clientflow/
 │   │       └── page.tsx
 │   ├── (dashboard)/
 │   │   ├── layout.tsx              # Protected layout, checks session
-│   │   ├── page.tsx                # Dashboard — admin only
+│   │   ├── page.tsx                # Dashboard
 │   │   ├── clients/
-│   │   │   ├── page.tsx            # Client list
-│   │   │   └── [id]/
-│   │   │       └── page.tsx        # Client detail + history
 │   │   ├── visits/
-│   │   │   └── new/
-│   │   │       └── page.tsx        # Register visit — staff + admin
 │   │   ├── employees/
-│   │   │   └── page.tsx            # Employee list + stats — admin only
 │   │   ├── reports/
-│   │   │   └── page.tsx            # AI reports — admin only
 │   │   └── settings/
-│   │       └── page.tsx            # Services + team management — admin only
 │   └── api/
 │       ├── auth/
 │       │   └── [...all]/
 │       │       └── route.ts        # Better Auth catch-all
 │       ├── clients/
-│       │   ├── route.ts            # GET list, POST create
-│       │   └── [id]/
-│       │       └── route.ts        # GET detail, PATCH update, DELETE soft
 │       ├── visits/
-│       │   └── route.ts            # GET list, POST create
 │       ├── services/
-│       │   ├── route.ts            # GET list, POST create
-│       │   └── [id]/
-│       │       └── route.ts        # PATCH update, DELETE soft
 │       ├── employees/
-│       │   ├── route.ts            # GET list, POST invite
-│       │   └── [id]/
-│       │       └── route.ts        # PATCH update, DELETE soft
 │       ├── dashboard/
-│       │   └── route.ts            # GET aggregated metrics
 │       └── reports/
-│           ├── route.ts            # GET list of past reports
-│           └── generate/
-│               └── route.ts        # POST generate new report via LLM
 ├── components/
 │   ├── ui/                         # shadcn/ui components
 │   ├── layout/
-│   │   ├── sidebar.tsx
-│   │   └── topbar.tsx
 │   ├── clients/
-│   │   ├── client-list.tsx
-│   │   ├── client-card.tsx
-│   │   └── client-form.tsx
 │   ├── visits/
-│   │   └── visit-form.tsx
 │   ├── dashboard/
-│   │   ├── metric-card.tsx
-│   │   └── revenue-chart.tsx
 │   └── reports/
-│       └── report-viewer.tsx
 ├── lib/
 │   ├── prisma.ts                   # Prisma client singleton
 │   ├── auth.ts                     # Better Auth server config
 │   ├── auth-client.ts              # Better Auth react client
-│   ├── validations/                # Zod schemas per entity
-│   │   ├── client.ts
-│   │   ├── visit.ts
-│   │   └── service.ts
+│   ├── validations/
 │   └── prompts/
-│       └── weekly-report.ts        # LLM prompt construction
 ├── hooks/
-│   └── use-fetch.ts                # Fetch with AbortController + timeout
-├── types/                          # Global type definitions
+│   └── use-fetch.ts
+├── types/
 ├── proxy.ts                        # Route protection (Next.js 16 standard)
 ├── prisma/
 │   └── schema.prisma
@@ -293,22 +258,22 @@ OPENROUTER_MODEL=openrouter/free
 - [x] Initialize Next.js 16 project with TypeScript and strict mode
 - [x] Configure Tailwind CSS and install shadcn/ui
 - [x] Set up Prisma 7 with Neon connection string
-- [x] Write the full schema including Better Auth requirements
+- [x] Write the full schema including Better Auth and multitenancy
 - [x] Create Prisma client singleton in `lib/prisma.ts`
 - [x] Set up environment variables
-- [X] Migrate the schema to Neon
-- [X] Verify: `prisma studio` shows all tables correctly
+- [x] Migrate the schema to Neon
+- [x] Verify: `prisma studio` shows all tables correctly
 
 ---
 
 ### Phase 1 — Auth (Better Auth)
 > Goal: users can log in, roles are enforced, routes are protected
 
-- [ ] Configure Better Auth with Prisma adapter and nextCookies plugin
-- [ ] Set up `api/auth/[...all]` catch-all route
+- [x] Configure Better Auth with Prisma adapter and nextCookies plugin
+- [x] Set up `api/auth/[...all]` catch-all route
 - [ ] Implement `proxy.ts` for route protection and session validation
 - [ ] Build login page UI using Better Auth client
-- [ ] Include `role` and `businessId` as additional user fields
+- [ ] Implement logic to check `BusinessMember` role for route authorization
 - [ ] Redirect unauthenticated users to `/login`
 - [ ] Redirect staff away from admin-only routes
 - [ ] Seed one admin user and one staff user
@@ -318,16 +283,15 @@ OPENROUTER_MODEL=openrouter/free
 
 ## Current Status
 
-**Active Phase:** 0 — Foundation
-**Last completed task:** Set up Prisma 7 and Better Auth foundation
+**Active Phase:** 1 — Auth
+**Last completed task:** Better Auth and Route Handler setup
 **Last updated:** 2026-03-25
 
 ---
 
 ## Technical Notes
 
-> This section is updated by the agent when a non-obvious decision is made during implementation.
-
-- **Next.js 16 Proxy**: Switched from `middleware.ts` to `proxy.ts` following Next.js 16 standards for route protection.
-- **Better Auth**: Adopted Better Auth as the authentication provider for its framework-agnostic nature and stable Next.js 16 support.
-- **Prisma 7**: Upgraded to Prisma 7 to leverage latest features and performance improvements.
+- **Next.js 16 Proxy**: Switched from `middleware.ts` to `proxy.ts` following Next.js 16 standards.
+- **Better Auth**: Replaced NextAuth for framework-agnostic stability and better Next.js 16 support.
+- **Multitenancy**: Handled via `BusinessMember`. `User` does not store `businessId` or `role` directly.
+- **Prisma 7**: Leveraging latest Prisma features.
