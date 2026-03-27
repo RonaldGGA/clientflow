@@ -6,15 +6,18 @@ const PUBLIC_ROUTES = ["/login"];
 // Better Auth API prefix — always public
 const AUTH_API_PREFIX = "/api/auth";
 
-// Routes only accessible by admin role
-// NOTE: role check here is shallow (cookie-based).
-// Deep role validation happens server-side in each layout/route.
-const STAFF_BLOCKED_ROUTES = [
+// Routes staff cannot access — admin only
+const ADMIN_ONLY_ROUTES = [
   "/employees",
   "/reports",
   "/settings",
   "/clients",
+  "/dashboard",
 ];
+
+const SESSION_COOKIE = "better-auth.session_token";
+const SESSION_COOKIE_SECURE = "__Secure-better-auth.session_token";
+const ROLE_COOKIE = "cf-role";
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
@@ -32,38 +35,37 @@ function isStaticAsset(pathname: string): boolean {
   );
 }
 
+function isAdminOnlyRoute(pathname: string): boolean {
+  return ADMIN_ONLY_ROUTES.some((route) => pathname.startsWith(route));
+}
+
 /**
- * Next.js 16 proxy (file must be named middleware.ts due to confirmed
- * Next.js 16 bug on some platforms — see: github.com/vercel/next.js/issues/85243)
+ * Next.js 16 proxy — lightweight, no DB calls.
  *
- * This proxy is intentionally lightweight — it only checks for the
- * presence of the Better Auth session cookie.
+ * Authentication: checked via Better Auth session cookie.
+ * Authorization: checked via cf-role cookie (set by /api/auth/session-init after login).
  *
- * Deep session validation (role, businessId) happens server-side
- * in app/(dashboard)/layout.tsx and individual route handlers.
- *
- * IMPORTANT: Never import Prisma, auth, or any heavy module here.
- * The proxy bundle is separate from the app bundle.
+ * Deep validation (expiry, tampering) happens server-side in layouts and route handlers.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Pass through: static assets, Next.js internals
+  // Pass through: static assets and Next.js internals
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
   }
 
-  // Pass through: Better Auth API (handles its own auth)
+  // Pass through: Better Auth API routes
   if (isAuthApiRoute(pathname)) {
     return NextResponse.next();
   }
 
-  // Check for Better Auth session cookie (lightweight — no DB call)
   const sessionCookie =
-    request.cookies.get("better-auth.session_token") ??
-    request.cookies.get("__Secure-better-auth.session_token");
+    request.cookies.get(SESSION_COOKIE) ??
+    request.cookies.get(SESSION_COOKIE_SECURE);
 
   const isAuthenticated = Boolean(sessionCookie?.value);
+  const role = request.cookies.get(ROLE_COOKIE)?.value ?? null;
 
   // Not authenticated → redirect to login
   if (!isAuthenticated && !isPublicRoute(pathname)) {
@@ -77,10 +79,15 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Staff role → block access to admin-only routes
+  if (isAuthenticated && role === "staff" && isAdminOnlyRoute(pathname)) {
+    return NextResponse.redirect(new URL("/visits", request.url));
+  }
+
   return NextResponse.next();
 }
 
-// Export as both names for compatibility
+// Export as both names for Next.js 16 compatibility on Windows
 export { proxy as middleware };
 
 export const config = {

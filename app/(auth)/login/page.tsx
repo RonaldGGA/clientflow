@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -30,6 +30,10 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+
+    // Set the role cookie so middleware can do role-based routing
+    // without hitting the database on every request
+    await fetch("/api/auth/session-init");
 
     router.push("/dashboard");
   }
