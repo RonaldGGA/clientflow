@@ -12,7 +12,7 @@ const ADMIN_ONLY_ROUTES = [
   "/reports",
   "/settings",
   "/clients",
-  "/dashboard",
+  "/",
 ];
 
 const SESSION_COOKIE = "better-auth.session_token";
@@ -47,13 +47,18 @@ function isAdminOnlyRoute(pathname: string): boolean {
  *
  * Deep validation (expiry, tampering) happens server-side in layouts and route handlers.
  */
-export function proxy(request: NextRequest) {
+export function proxy(request: NextRequest, response: NextResponse) {
   const { pathname } = request.nextUrl;
 
   // Pass through: static assets and Next.js internals
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
   }
+  // response.headers.set(
+  //   "Cache-Control",
+  //   "no-store, no-cache, must-revalidate, private",
+  // );
+  // response.headers.set("Pragma", "no-cache");
 
   // Pass through: Better Auth API routes
   if (isAuthApiRoute(pathname)) {
@@ -76,7 +81,7 @@ export function proxy(request: NextRequest) {
 
   // Already authenticated → redirect away from login
   if (isAuthenticated && isPublicRoute(pathname)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Staff role → block access to admin-only routes

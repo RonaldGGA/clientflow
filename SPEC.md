@@ -267,34 +267,167 @@ OPENROUTER_MODEL=openrouter/free
 
 ---
 
-### Phase 1 — Auth (Better Auth)
+### ✅ Phase 1 — Auth (Better Auth)
 > Goal: users can log in, roles are enforced, routes are protected
 
 - [x] Configure Better Auth with Prisma adapter and nextCookies plugin
 - [x] Set up `api/auth/[...all]` catch-all route
-- [x] Implement `proxy.ts` for route protection and session validation
+- [x] Implement `middleware.ts` for route protection and session validation
 - [x] Build login page UI using Better Auth client
-- [ ] Implement logic to check `BusinessMember` role for route authorization
-- [ ] Redirect unauthenticated users to `/login`
-- [ ] Redirect staff away from admin-only routes
-- [ ] Seed one admin user and one staff user
-- [ ] Verify: admin sees full nav, staff sees only visits
+- [x] Implement logic to check `BusinessMember` role for route authorization
+- [x] Redirect unauthenticated users to `/login`
+- [x] Redirect staff away from admin-only routes
+- [x] Seed one admin user and one staff user
+- [x] Verify: admin sees full nav, staff sees only visits
 
----
+### ✅ Phase 2 — Dashboard & Layout
+> Goal: authenticated users see a functional dashboard with real metrics and navigation
+
+**Architecture decisions:**
+- Dashboard is admin-only. Staff is redirected to `/visits` by middleware.
+- Sidebar is collapsible (icon-only mode), expanded by default, state stored in localStorage.
+- Profile is a dropdown in the sidebar footer — no separate route.
+- All metrics are computed server-side in `/api/dashboard` — never on the client.
+- Week range: Monday 00:00:00 to Sunday 23:59:59 of the current calendar week.
+- Chart data (visits per day) is returned by the same API route as metrics.
+
+**Sidebar navigation:**
+- Admin: Dashboard, Clients, Visits, Employees, Reports, Settings + Profile dropdown
+- Staff: Visits only + Profile dropdown
+
+**Metrics (GET /api/dashboard):**
+- `weeklyRevenue`: sum of `actualPrice` for visits in current calendar week
+- `activeClients`: count of clients where `deletedAt IS NULL`
+- `weeklyVisits`: count of visits in current calendar week
+- `topService`: service name with most visits in current calendar week
+- `visitsPerDay`: array of { day: string, count: number } for the current week (Mon–Sun)
+- `recentVisits`: last 5 visits with client name, service name, actualPrice, createdAt
+
+**Response shape:**
+
+```json
+{
+  "data": {
+    "weeklyRevenue": 1240.00,
+    "activeClients": 8,
+    "weeklyVisits": 23,
+    "topService": "Corte clásico",
+    "visitsPerDay": [
+      { "day": "Mon", "count": 4 },
+      { "day": "Tue", "count": 7 }
+    ],
+    "recentVisits": [
+      {
+        "id": "...",
+        "clientName": "Juan",
+        "serviceName": "Corte clásico",
+        "actualPrice": 15.00,
+        "createdAt": "2026-03-25T19:00:00Z"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+**Files to create:**
+
+- `app/(dashboard)/layout.tsx` — sidebar + topbar, role-aware nav
+- `components/layout/sidebar.tsx` — collapsible sidebar component
+- `components/layout/sidebar-nav.tsx` — nav items with active state
+- `components/layout/user-menu.tsx` — profile dropdown in sidebar footer
+- `app/(dashboard)/page.tsx` — dashboard page, fetches metrics server-side
+- `app/api/dashboard/route.ts` — metrics API, admin-only, force-dynamic
+- `components/dashboard/metric-card.tsx` — reusable metric display card
+- `components/dashboard/visits-chart.tsx` — Recharts bar chart, visits per day
+- `components/dashboard/recent-visits.tsx` — last 5 visits table
+
+**Tasks:**
+
+- [X] Build collapsible sidebar with role-aware navigation
+- [X] Build profile dropdown in sidebar footer with sign out
+- [X] Create GET /api/dashboard with all metrics
+- [X] Build dashboard page with metric cards, chart, recent visits
+- [X] Verify: metrics match data in database
+- [X] Verify: staff cannot access /dashboard (redirected to /visits)
+
+### Phase 3 — Clients & Services
+
+> Goal: admins can manage clients and services with full CRUD
+
+**Architecture decisions:**
+
+- Clients and Services live under separate routes: `/clients` and `/settings/services`
+- Services management lives under Settings — it's configuration, not day-to-day operation
+- All lists are paginated (default page size: 20) with server-side search via query param `?q=`
+- Soft delete only — `deletedAt` is set, records are never removed
+- Forms use controlled components with client-side validation before submission
+- Optimistic UI is not used — all mutations wait for server confirmation before updating the list
+
+**Endpoints:**
+
+- `GET /api/clients?q=&page=` — paginated list, excludes soft-deleted
+- `POST /api/clients` — create client
+- `PATCH /api/clients/[id]` — update client
+- `DELETE /api/clients/[id]` — soft delete
+- `GET /api/services?q=` — full list (services don't paginate, typically small set)
+- `POST /api/services` — create service
+- `PATCH /api/services/[id]` — update service
+- `DELETE /api/services/[id]` — soft delete
+
+**Files to create:**
+
+- `app/(dashboard)/clients/page.tsx`
+- `app/api/clients/route.ts`
+- `app/api/clients/[id]/route.ts`
+- `components/clients/client-list.tsx`
+- `components/clients/client-form.tsx`
+- `components/clients/delete-client-dialog.tsx`
+
+**Tasks:**
+
+- [ ] Create GET + POST /api/clients
+- [ ] Create PATCH + DELETE /api/clients/[id]
+- [ ] Build clients list page with search and pagination
+- [ ] Build create/edit client form in a dialog
+- [ ] Build soft delete confirmation dialog
+- [ ] Verify: soft deleted clients don't appear in list or metrics
 
 ## Current Status
 
-**Active Phase:** 1 — Auth
-**Last completed task:** Better Auth and Route Handler setup
-**Last updated:** 2026-03-25
-
----
+**Active Phase:** 3 — Clients & Services
+**Last completed phase:** 2 — Dashboard & Layout
+**Last updated:** 2026-03-27
 
 ## Technical Notes
 
-- **Proxy/Middleware**: Usar `middleware.ts` (no `proxy.ts`) por bug confirmado en Next.js 16
-  (github.com/vercel/next.js/issues/85243). El proxy solo verifica la cookie de sesión.
-  Validación profunda de roles en layouts y route handlers vía `lib/session.ts`.
 - **Better Auth**: Replaced NextAuth for framework-agnostic stability and better Next.js 16 support.
 - **Multitenancy**: Handled via `BusinessMember`. `User` does not store `businessId` or `role` directly.
 - **Prisma 7**: Leveraging latest Prisma features.
+- **middleware.ts**: Se usa `middleware.ts` en lugar de `proxy.ts` por bug confirmado
+  en Next.js 16 en Windows. Exporta `proxy` como función principal y re-exporta
+  como `middleware` para compatibilidad.
+- **Role cookie**: `cf-role` cookie seteada por `/api/auth/session-init` después del
+  login. Permite al middleware verificar roles sin tocar la DB.
+- **Prisma 7 output**: Cliente generado en `./app/generated/prisma/client`.
+  Todos los imports usan `@/app/generated/prisma/client`.
+- **Seed**: `npx prisma db seed` crea business demo + admin + staff.
+  Credenciales: `admin@clientflow.com` / `password123`, `staff@clientflow.com` / `password123`.
+- **Dashboard**: Solo visible para admin. Staff redirige a `/visits` via middleware.
+- **Métricas**: Calculadas server-side en `/api/dashboard`. Rango semanal: lunes 00:00
+  a domingo 23:59 de la semana calendario actual.
+  - **SSL mode**: `sslmode=verify-full` usado en DATABASE_URL y DIRECT_URL para
+  compatibilidad futura con pg v9 / pg-connection-string v3.
+- **session-init**: endpoint POST en `/api/auth/session-init`. Requiere
+  `credentials: "include"` en el fetch del login para que la cookie de sesión
+  viaje al servidor. Setea `cf-role` httpOnly con path `/`.
+- **Sidebar collapse**: usa `useSyncExternalStore` con `localStorage`. 
+  `getServerSnapshot` devuelve `false` para evitar hydration mismatch.
+  `window.dispatchEvent(new StorageEvent(...))` necesario para notificar
+  cambios en la misma pestaña.
+- **Mobile sidebar**: oculto en mobile (`< lg`). Se abre como Sheet drawer
+  con botón hamburger fijo en `top-4 left-4`.
+- **Logo**: tijera (`Scissors`) es placeholder. Se volverá dinámico en Phase
+  Settings basado en el tipo de negocio configurado.
+- **Dashboard fetch**: `page.tsx` fetcha `/api/dashboard` server-side pasando
+  `headers()` para que la cookie de sesión viaje correctamente entre server components.

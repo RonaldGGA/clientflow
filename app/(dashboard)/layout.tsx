@@ -1,23 +1,46 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "@/lib/session";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { Sidebar } from "@/components/layout/sidebar";
+import { BfcacheGuard } from "@/components/layout/bfcache-guard";
+import prisma from "@/lib/prisma";
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-/**
- * Protected dashboard layout.
- * Secondary line of defense after proxy.ts.
- * Validates session server-side on every render.
- */
 export default async function DashboardLayout({
   children,
-}: DashboardLayoutProps) {
-  const session = await getServerSession();
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   if (!session) {
     redirect("/login");
   }
 
-  return <div className="min-h-screen bg-zinc-950">{children}</div>;
+  const membership = await prisma.businessMember.findFirst({
+    where: { userId: session.user.id },
+    include: { business: true },
+  });
+
+  if (!membership) {
+    redirect("/login");
+  }
+
+  return (
+    <div className="flex h-screen bg-zinc-950 overflow-hidden">
+      <BfcacheGuard />
+      <Sidebar
+        user={{
+          name: session.user.name ?? "User",
+          email: session.user.email,
+          image: session.user.image ?? null,
+        }}
+        role={membership.role}
+      />
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-6">{children}</div>
+      </main>
+    </div>
+  );
 }

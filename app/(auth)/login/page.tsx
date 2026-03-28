@@ -33,9 +33,12 @@ export default function LoginPage() {
 
     // Set the role cookie so middleware can do role-based routing
     // without hitting the database on every request
-    await fetch("/api/auth/session-init");
+    await fetch("/api/auth/session-init", {
+      method: "POST",
+      credentials: "include",
+    });
 
-    router.push("/dashboard");
+    router.push("/");
   }
 
   return (

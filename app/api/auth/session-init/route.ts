@@ -10,7 +10,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
  * Called immediately after login to persist the user's role in a cookie.
  * This allows middleware to do role-based redirects without hitting the DB.
  */
-export async function GET() {
+export async function POST() {
   const session = await getServerSession();
 
   if (!session) {
