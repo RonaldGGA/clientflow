@@ -7,36 +7,54 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 });
 
-const prisma = new PrismaClient({
-  adapter,
-});
+const prisma = new PrismaClient({ adapter });
 
-async function createUserIfNotExists(
+async function createUserWithCredentials(
   email: string,
   password: string,
   name: string,
 ) {
-  const existing = await prisma.user.findMany({ where: { email } });
-  if (existing.length !== 0) {
+  // Si ya existe, lo devolvemos sin crear nada
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
     console.log(`⏭️  User already exists: ${email}`);
-    return existing[0];
+    return existing;
   }
 
-  await auth.api.signUpEmail({
-    body: { email, password, name },
+  // Mismo patrón que POST /api/employees
+  // User + Account en una transacción, sin auth.api.signUpEmail
+  const ctx = await auth.$context;
+  const hashedPassword = await ctx.password.hash(password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const newUser = await tx.user.create({
+      data: {
+        name,
+        email,
+        emailVerified: true,
+        password: hashedPassword,
+      },
+    });
+
+    await tx.account.create({
+      data: {
+        accountId: newUser.id,
+        providerId: "credential",
+        userId: newUser.id,
+        password: hashedPassword,
+      },
+    });
+
+    return newUser;
   });
 
-  const created = await prisma.user.findMany({ where: { email } });
-  if (created.length === 0) throw new Error(`Failed to create user: ${email}`);
-
   console.log(`✅ User created: ${email}`);
-  return created[0];
+  return user;
 }
 
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Business — slug is the URL-friendly version of the name
   const business = await prisma.business.upsert({
     where: { id: "demo-business-id" },
     update: {},
@@ -47,53 +65,34 @@ async function main() {
     },
   });
 
-  console.log(`✅ Business: ${business.name} (/${business.slug})`);
+  console.log(`✅ Business: ${business.name}`);
 
   const PASSWORD = "password123";
 
-  const admin = await createUserIfNotExists(
+  const admin = await createUserWithCredentials(
     "admin@clientflow.com",
     PASSWORD,
     "Admin User",
   );
 
-  const staff = await createUserIfNotExists(
+  const staff = await createUserWithCredentials(
     "staff@clientflow.com",
     PASSWORD,
     "Staff Member",
   );
 
-  // BusinessMember has @@unique([businessId, userId]) — upsert works cleanly
   await prisma.businessMember.upsert({
-    where: {
-      businessId_userId: {
-        businessId: business.id,
-        userId: admin.id,
-      },
-    },
+    where: { businessId_userId: { businessId: business.id, userId: admin.id } },
     update: {},
-    create: {
-      businessId: business.id,
-      userId: admin.id,
-      role: "admin",
-    },
+    create: { businessId: business.id, userId: admin.id, role: "admin" },
   });
 
   console.log(`✅ Admin linked as 'admin'`);
 
   await prisma.businessMember.upsert({
-    where: {
-      businessId_userId: {
-        businessId: business.id,
-        userId: staff.id,
-      },
-    },
+    where: { businessId_userId: { businessId: business.id, userId: staff.id } },
     update: {},
-    create: {
-      businessId: business.id,
-      userId: staff.id,
-      role: "staff",
-    },
+    create: { businessId: business.id, userId: staff.id, role: "staff" },
   });
 
   console.log(`✅ Staff linked as 'staff'`);

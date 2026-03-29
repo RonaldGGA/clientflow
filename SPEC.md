@@ -53,23 +53,80 @@ The system is business-agnostic — the demo uses barbershop data.
   Neon for production only. `DATABASE_URL` and `DIRECT_URL` are equal in local dev.
 - **Visits are immutable**: no edit on visits. Delete and re-enter if wrong.
 - **staffId on visit create**: always taken from session, never from request body.
+- **Staff can create clients**: walk-in scenario. `/api/clients` removed from
+  `ADMIN_ONLY_API_ROUTES`. Staff has full CRUD on clients.
+- **cf-role cookie**: `httpOnly: false` by design. Client reads it to render admin-only
+  UI elements. Authorization always enforced server-side independently.
+- **Employee creation**: use `auth.$context` → `ctx.password.hash(password)`.
+  Never use `auth.api.signUpEmail` in route handlers — it creates a new session and
+  overwrites the caller's cookies, logging them out.
+- **Employee removal = desvincular**: delete `BusinessMember` only. `User` stays in DB
+  to preserve visit history. Employee loses access immediately.
+- **Settings page = Server Component + Client Component split**: `page.tsx` is a Server
+  Component that reads session, role, and business name server-side and passes them as
+  props to `settings-client.tsx`. Avoids hydration mismatch from reading cookies client-side.
+- **oslo/password is deprecated**: do not use. Use `auth.$context.password.hash`.
 
 ---
 
 ## Database Schema
 ```prisma
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Business {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  members  BusinessMember[]
+  clients  Client[]
+  services Service[]
+  visits   Visit[]
+  reports  Report[]
+}
+
+model BusinessMember {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  role       String   @default("staff")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([businessId])
+  @@index([userId])
+  @@index([businessId, role])
+}
+
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
-  emailVerified Boolean
+  emailVerified Boolean   @default(false)
   image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
   password      String?
-  sessions      Session[]
-  accounts      Account[]
-  businessMembers BusinessMember[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships BusinessMember[]
+  visits      Visit[]
 }
 
 model Session {
@@ -81,7 +138,10 @@ model Session {
   ipAddress String?
   userAgent String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {
@@ -89,7 +149,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -99,6 +158,11 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([providerId, accountId])
 }
 
 model Verification {
@@ -108,29 +172,8 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-}
 
-model Business {
-  id        String    @id @default(cuid())
-  name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  members   BusinessMember[]
-  clients   Client[]
-  services  Service[]
-  visits    Visit[]
-  reports   Report[]
-}
-
-model BusinessMember {
-  id         String   @id @default(cuid())
-  userId     String
-  businessId String
-  role       String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  @@index([identifier])
 }
 
 model Client {
@@ -142,8 +185,11 @@ model Client {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  business   Business  @relation(fields: [businessId], references: [id])
-  visits     Visit[]
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  visits   Visit[]
+
+  @@index([businessId])
 }
 
 model Service {
@@ -154,8 +200,11 @@ model Service {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  business   Business  @relation(fields: [businessId], references: [id])
-  visits     Visit[]
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  visits   Visit[]
+
+  @@index([businessId])
 }
 
 model Visit {
@@ -168,10 +217,16 @@ model Visit {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  client      Client   @relation(fields: [clientId], references: [id])
-  service     Service  @relation(fields: [serviceId], references: [id])
-  staff       User     @relation(fields: [staffId], references: [id])
-  business    Business @relation(fields: [businessId], references: [id])
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  staff    User     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([serviceId])
+  @@index([staffId])
 }
 
 model Report {
@@ -181,8 +236,12 @@ model Report {
   weekEnd    DateTime
   content    String
   createdAt  DateTime @default(now())
-  business   Business @relation(fields: [businessId], references: [id])
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
 }
+
 ```
 
 ---
@@ -197,7 +256,7 @@ clientflow/
 │   │       └── page.tsx
 │   ├── (dashboard)/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx                    # Dashboard /
+│   │   ├── page.tsx
 │   │   ├── clients/
 │   │   │   └── page.tsx
 │   │   ├── visits/
@@ -207,6 +266,8 @@ clientflow/
 │   │   ├── reports/
 │   │   │   └── page.tsx
 │   │   └── settings/
+│   │       ├── page.tsx              # Server Component
+│   │       ├── settings-client.tsx   # Client Component
 │   │       └── services/
 │   │           └── page.tsx
 │   └── api/
@@ -223,13 +284,17 @@ clientflow/
 │       │   ├── route.ts
 │       │   └── [id]/route.ts
 │       ├── employees/
-│       │   └── route.ts
+│       │   ├── route.ts
+│       │   └── [id]/route.ts
+│       ├── settings/
+│       │   ├── business/route.ts
+│       │   └── account/route.ts
 │       ├── dashboard/
 │       │   └── route.ts
 │       └── reports/
 │           └── route.ts
 ├── components/
-│   ├── ui/                             # shadcn/ui components
+│   ├── ui/
 │   ├── layout/
 │   │   ├── sidebar.tsx
 │   │   ├── sidebar-nav.tsx
@@ -244,10 +309,16 @@ clientflow/
 │   ├── services/
 │   │   ├── service-form-dialog.tsx
 │   │   └── delete-service-dialog.tsx
-│   └── visits/
-│       ├── visit-form-dialog.tsx
-│       ├── delete-visit-dialog.tsx
-│       └── visits-filters.tsx
+│   ├── visits/
+│   │   ├── visit-form-dialog.tsx
+│   │   ├── delete-visit-dialog.tsx
+│   │   └── visits-filters.tsx
+│   ├── employees/
+│   │   ├── employee-form-dialog.tsx
+│   │   └── delete-employee-dialog.tsx
+│   └── reports/
+│       ├── report-viewer.tsx
+│       └── week-picker.tsx
 ├── hooks/
 │   └── use-debounce.ts
 ├── lib/
@@ -255,6 +326,7 @@ clientflow/
 │   ├── auth.ts
 │   ├── auth-client.ts
 │   └── prompts/
+│       └── report.ts
 ├── prisma/
 │   └── schema.prisma
 ├── proxy.ts
@@ -266,14 +338,7 @@ clientflow/
 ## Environment Variables
 
 ```env
-# Development (.env.local .env) — local PostgreSQL
 DATABASE_URL="postgresql://postgres:password@localhost:5432/clientflow_dev"
-
-
-# Production (Vercel dashboard) — Neon
-# DATABASE_URL="postgresql://...pooler.neon.tech/...?sslmode=verify-full"
-# DIRECT_URL="postgresql://...neon.tech/...?sslmode=verify-full"
-
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
@@ -311,56 +376,25 @@ OPENROUTER_API_KEY=
 
 ### ✅ Phase 2 — Dashboard & Layout
 - [x] Collapsible sidebar with role-aware navigation
-- [x] Mobile drawer with Sheet component (hidden below lg breakpoint)
+- [x] Mobile drawer with Sheet component
 - [x] Profile dropdown in sidebar footer with sign out
-- [x] GET /api/dashboard with all metrics (Promise.all, server-side)
+- [x] GET /api/dashboard with all metrics
 - [x] Dashboard page with MetricCard, VisitsChart, RecentVisits
 - [x] Verify: staff redirected to /visits, cannot access /
 
 ---
 
 ### ✅ Phase 3 — Clients & Services
-- [x] GET + POST /api/clients (paginated, search by name+phone)
+- [x] GET + POST /api/clients (paginated, search)
 - [x] PATCH + DELETE /api/clients/[id] (soft delete)
-- [x] Clients list page with search, pagination, create/edit/delete dialogs
-- [x] GET + POST /api/services (duplicate name check, 409 on conflict)
+- [x] Clients list page with search, pagination, CRUD dialogs
+- [x] GET + POST /api/services (duplicate name check)
 - [x] PATCH + DELETE /api/services/[id] (soft delete)
 - [x] Services settings page with full CRUD
-- [x] Verify: soft deleted records excluded from lists and metrics
-
-**Pending polish:**
-
-- [ ] Phone field format validation
-- [ ] Clients table static width (notes column causes layout shift)
 
 ---
+
 ### ✅ Phase 4 — Visits
-
-> Goal: staff and admin can log visits, admin can see and filter all visits
-
-**Architecture decisions:**
-
-- Visits link a client, service, staff member, and price at a point in time
-- `actualPrice` defaults to service `basePrice`, overridable per visit
-- Staff can create visits and see their own. Admin sees all.
-- Visits are immutable — no edit. Delete and re-enter if wrong.
-- Hard delete on visits — no soft delete, no dependents
-- `staffId` always comes from session, never from request body
-- Admin can filter by staff member and date. Staff filter is fixed to self.
-- Date filters: today, this week, this month, custom range
-- List paginated at 20 per page
-- **Staff can create clients**: walk-in scenario — if a new client arrives and
-  admin is absent, staff must be able to register the client before logging
-  the visit. Staff has full CRUD on clients. Admin-only restriction removed
-  from `POST /api/clients` and `/api/clients` removed from `ADMIN_ONLY_API_ROUTES`
-  in `proxy.ts`.
-- **cf-role cookie is not HttpOnly**: role is not sensitive data — authorization
-  is always enforced server-side. Client needs to read the cookie to conditionally
-  render admin-only UI (staff filter dropdown, delete button). Changed
-  `httpOnly: false` in `session-init/route.ts`.
-
-**Completed tasks:**
-
 - [x] GET /api/visits with role-aware filtering and pagination
 - [x] POST /api/visits — staffId from session, price defaults to basePrice
 - [x] DELETE /api/visits/[id] — hard delete, admin only
@@ -369,175 +403,159 @@ OPENROUTER_API_KEY=
 - [x] Delete confirmation dialog
 - [x] Verify: staff only sees their own visits
 - [x] Verify: actualPrice defaults to basePrice on service select
-- [x] Verify: admin can filter by staff member (dropdown visible when cf-role=admin)
-
-**Pending polish:**
-
-- [ ] Staff filter dropdown in visits page shows no members until
-  GET /api/employees is implemented (Phase 5)
+- [x] Verify: admin can filter by staff member
 
 ---
 
 ### ✅ Phase 5 — Employees
-> Goal: admin can view, create, edit role, and remove staff members.
-
-**Architecture decisions:**
-- **Option A — Admin creates accounts directly**: admin provides name, email,
-  password, and role. No email flow. Credentials handed to employee in person.
-  Chosen for MVP simplicity — appropriate for small businesses.
-- **Option B (future)**: invite-by-email flow via Resend or SendGrid.
-  Revisit post-MVP if needed.
-- **Password hashing**: uses `auth.$context` → `ctx.password.hash(password)` —
-  the internal Better Auth hasher. Guarantees same scrypt params and format as
-  the rest of the auth system. Do NOT use `oslo/password` (deprecated), do NOT
-  reimplement scrypt manually.
-- **Do NOT use `auth.api.signUpEmail` in route handlers**: that method creates
-  a new session and overwrites the calling admin's cookies, logging them out.
-  Use Prisma transaction (User + Account + BusinessMember) directly.
-- **Account record**: `accountId = userId`, `providerId = "credential"`,
-  password hash stored in both `User.password` and `Account.password`.
-- **Remove employee = desvincular**: delete `BusinessMember` only. `User` stays
-  in DB to preserve visit history. Employee loses access immediately.
-- **Guards on PATCH**: admin cannot change their own role.
-- **Guards on DELETE**: cannot remove yourself, cannot remove the last admin.
-- **Edit = role change only**: name and email are not editable by admin in MVP.
-- `cf-role` cookie is not HttpOnly — needed by client to render admin-only UI.
-  Authorization always enforced server-side regardless.
-
-**Completed tasks:**
-
-- [x] GET /api/employees — list all business members with user data
-- [x] POST /api/employees — create user + account + businessMember in transaction
+- [x] GET /api/employees — list all business members
+- [x] POST /api/employees — create with hashed password via ctx.password.hash
 - [x] PATCH /api/employees/[id] — update role, guard: cannot change own role
 - [x] DELETE /api/employees/[id] — desvincular, guards: not self, not last admin
-- [x] Employees page with table (name, email, role badge, joined date)
+- [x] Employees page with table
 - [x] Create/edit employee dialog
 - [x] Delete confirmation dialog
 - [x] Verify: staff gets 403 on all /api/employees endpoints
-- [x] Verify: cannot change your own role
-- [x] Verify: cannot remove the last admin
-- [x] Verify: visits staff filter dropdown populates after GET /api/employees
+- [x] Verify: visits staff filter dropdown populates
 
 ---
 
-### Phase 6 — Reports
+### ✅ Phase 6 — Reports
+- [x] lib/prompts/report.ts — prompt template with typed payload
+- [x] Weekly stats query — visits, revenue, top services, top clients, staff
+- [x] Gemini 2.5 Flash call with 15s AbortController
+- [x] OpenRouter fallback with 15s AbortController
+- [x] GET /api/reports?weekStart= — return stored report or null
+- [x] POST /api/reports — generate, store, return
+- [x] Reports page with week picker and report viewer (react-markdown)
+- [x] Verify: existing report returned without regenerating
+- [x] Verify: force regenerate overwrites stored report
 
-> Goal: admin can generate and view AI-powered weekly reports summarizing
-> business activity. Reports are stored and can be reviewed later.
+---
 
-**Architecture decisions:**
+### ✅ Phase 7 — Settings
+- [x] PATCH /api/settings/business — update business name, admin only
+- [x] PATCH /api/settings/account — update name, email, password (any user)
+- [x] Settings page — Server Component reads session + role + business name,
+      passes as props to settings-client.tsx (Client Component)
+- [x] Business section — read-only with inline edit, admin only
+- [x] Account section — profile card + password card, read-only with inline edit
+- [x] Password change verifies current password via ctx.password.verify
 
-- **LLM pipeline**: Gemini 2.5 Flash (primary) → OpenRouter free tier (fallback).
-  15s AbortController timeout on each call. If both fail, return a clear error —
-  never block the UI waiting indefinitely.
-- **Prompt lives in `lib/prompts/`**: never inline prompts in route handlers.
-  Prompt receives a clean, summarized payload — never raw Prisma objects.
-- **Report payload**: computed server-side before calling LLM. Includes:
-  total visits, total revenue, top services (name + count + revenue),
-  top clients (name + visit count), staff activity (name + visits + revenue),
-  comparison vs previous week (visits delta, revenue delta).
-- **Report scope**: always one full calendar week (Monday 00:00 → Sunday 23:59).
-  Admin selects the week via a date picker. Defaults to last completed week.
-- **Reports are stored**: saved to `Report` table after generation.
-  `weekStart` + `weekEnd` + `content` (LLM output as markdown string).
-- **One report per week**: if a report already exists for that week, return the
-  stored one instead of regenerating. Admin can force regenerate with a button.
-- **Report format**: LLM returns markdown. Rendered in the UI with a markdown
-  renderer (`react-markdown`).
-- **Staff cannot access reports**: enforced at middleware and route handler level.
+---
 
-**LLM call chain:**
-
-1. Compute weekly stats from DB (Prisma, server-side)
-2. Build clean payload object
-3. Inject into prompt template (`lib/prompts/report.ts`)
-4. Call Gemini 2.5 Flash with 15s timeout
-5. If Gemini fails → call OpenRouter with same prompt and 15s timeout
-6. If both fail → return `{ error: "Report generation failed" }`
-7. Save result to `Report` table and return to client
-
-**Endpoints:**
-
-- `GET /api/reports?weekStart=` — returns stored report for that week if exists
-- `POST /api/reports` — generates report for given week, stores and returns it
-
-**Files to create:**
-
-- `app/api/reports/route.ts`
-- `app/(dashboard)/reports/page.tsx`
-- `lib/prompts/report.ts`
-- `components/reports/report-viewer.tsx`
-- `components/reports/week-picker.tsx`
+### Phase 8 — UI Polish & Bug Fixes
+> Goal: fix known inconsistencies and bugs before deploy.
 
 **Tasks:**
+- [ ] Fix hamburger button overlap with page titles on mobile
+      Root cause: inconsistent top padding across pages. Solution: enforce
+      `pt-14 lg:pt-0` on every page wrapper so the hamburger (positioned
+      `top-4 left-4`, `lg:hidden`) always has space on mobile.
+- [ ] Fix business name in sidebar showing "ClientFlow" instead of actual name
+      Root cause: sidebar receives user data but not business name. Solution:
+      read business name in dashboard layout server component and pass as prop
+      to sidebar.
+- [ ] Fix UserMenu DropdownMenuLabel error (`MenuGroupRootContext is missing`)
+      Root cause: shadcn/ui updated DropdownMenu to use Base UI which changed
+      how DropdownMenuLabel works inside triggers. Solution: replace
+      DropdownMenuLabel with a plain div styled to match.
+- [ ] Phone field format validation on client form
+- [ ] Clients table static width (notes column causes layout shift)
+- [ ] Business name in sidebar does not update after saving in Settings without
+      a full page reload. Requires router.refresh() after successful PATCH
+      or a shared server state solution.
 
-- [ ] `lib/prompts/report.ts` — prompt template with typed payload
-- [ ] Weekly stats query — visits, revenue, top services, top clients, staff activity
-- [ ] Gemini 2.5 Flash call with 15s AbortController
-- [ ] OpenRouter fallback with 15s AbortController
-- [ ] GET /api/reports?weekStart= — return stored report or null
-- [ ] POST /api/reports — generate, store, return
-- [ ] Reports page with week picker and report viewer
-- [ ] Verify: existing report returned without regenerating
-- [ ] Verify: force regenerate overwrites stored report
-- [ ] Verify: timeout and fallback work (test by pointing to invalid Gemini key)
-- [ ] Verify: staff gets 403 on all /api/reports endpoints
+---
+
+### Phase 9 — Deploy
+> Goal: ship to production on Vercel + Neon.
+
+**Tasks:**
+- [ ] Create Neon database and get connection strings
+- [ ] Set all environment variables in Vercel dashboard
+- [ ] Update DATABASE_URL and DIRECT_URL for production (sslmode=verify-full)
+- [ ] Run prisma migrate deploy on Neon
+- [ ] Create production seed (admin account only, no demo data)
+- [ ] Deploy to Vercel and verify all routes work
+- [ ] Verify: Better Auth cookies work on production domain
+- [ ] Verify: Gemini API key works in production environment
+
+---
+
+## Future Improvements
+
+### AI — Expanded Usage
+
+The current AI usage (weekly report) is the foundation. Natural next steps:
+
+- **Client history summary**: when opening a client's profile, generate a short
+  AI summary of their visit history — what services they prefer, how often they
+  come, any notes pattern. Useful for staff to personalize service.
+- **Anomaly alerts**: after report generation, AI flags if revenue dropped more
+  than 20% vs previous week and suggests possible reasons (fewer visits, lower
+  prices, specific staff absent).
+- **Client churn detection**: AI identifies clients who haven't visited in
+  longer than their usual cycle and generates a "at risk" list for the admin.
+- **Price optimization suggestions**: based on service demand and revenue data,
+  AI suggests which services could support a price increase.
+- **Natural language search**: let admin ask "how much did we make last month
+  from haircuts" in a chat interface instead of navigating filters.
+
+### Product — Post-MVP Features
+
+- **Multi-business onboarding**: UI flow to create a new business account.
+  Schema already supports it — only the onboarding flow is missing.
+- **Invite by email (Option B for employees)**: admin enters email, system
+  sends invite link via Resend. Employee sets own password. Requires email
+  infrastructure.
+- **Report export to PDF**: download the weekly report as a formatted PDF.
+  Use a library like `@react-pdf/renderer` or generate via Puppeteer on the server.
+- **Client profile page**: dedicated page per client showing full visit history,
+  total spend, last visit date, and AI-generated summary.
+- **Dashboard comparison**: show current week vs previous week delta on all
+  metric cards, not just totals.
+- **Notifications**: in-app or email alert when a weekly report is ready, or
+  when a client hasn't visited in over 30 days.
+- **Mobile app**: the data model and API are already built. A React Native
+  frontend could reuse all endpoints directly.
 
 ---
 
 ## Current Status
 
-**Active Phase:** 6 — Reports
-**Last completed phase:** 5 — Employees
+**Active Phase:** 8 — UI Polish & Bug Fixes
+**Last completed phase:** 7 — Settings
 **Last updated:** 2026-03-29
 
 ---
 
 ## Technical Notes
 
-- **Employee creation**: use `auth.$context` → `ctx.password.hash(password)` for
-  hashing. Never use `auth.api.signUpEmail` in route handlers — it creates a new
-  session and overwrites the caller's cookies.
-- **cf-role cookie**: `httpOnly: false` by design. Client reads it to render
-  admin-only UI. All authorization is enforced server-side independently.
-- **Staff can create clients**: `/api/clients` removed from `ADMIN_ONLY_API_ROUTES`.
-  Walk-in scenario — staff must register new clients before logging visits.
-- **Employee removal = desvincular**: `BusinessMember` deleted, `User` preserved.
-  Visit history integrity maintained via foreign key on `staffId`.
 - **Better Auth**: credentials login only. `proxy.ts` handles route protection globally.
 - **Multitenancy**: via `BusinessMember`. `User` has no `businessId` or `role` directly.
 - **Prisma 7**: client generated in `./app/generated/prisma/client`.
 - **middleware.ts**: uses `proxy.ts` naming for Next.js 16 Windows compatibility.
-  Exported as both `proxy` and `middleware`.
-- **Role cookie**: `cf-role` set by `/api/auth/session-init` POST after login.
-  Requires `credentials: "include"` in the fetch from login page.
-  Allows middleware to check roles without DB calls.
+- **Role cookie**: `cf-role` set by `/api/auth/session-init`. Not HttpOnly — client
+  reads it to render admin-only UI. Authorization always enforced server-side.
 - **Middleware route split**: `ADMIN_ONLY_PAGE_ROUTES` redirects staff to `/visits`.
-  `ADMIN_ONLY_API_ROUTES` returns 403 directly — never redirect API calls.
-  `"/"` uses exact match. All others use `startsWith`.
-- **SSL**: `sslmode=verify-full` in Neon URLs for pg v9 compatibility.
+  `ADMIN_ONLY_API_ROUTES` returns 403 directly.
 - **Sidebar collapse**: `useSyncExternalStore` with localStorage.
-  `getServerSnapshot` returns `false` to avoid hydration mismatch.
-  `window.dispatchEvent(new StorageEvent(...))` notifies same-tab changes.
 - **Mobile sidebar**: Sheet drawer, hamburger at `top-4 left-4`, hidden below `lg`.
-- **Dashboard fetch**: server component passes `headers()` so session cookie
-  travels correctly between server components.
-- **key prop on dialogs**: `key={editing ? \`edit-${id}\` : "create"}` forces
-  remount — useState initializes from correct data without useEffect.
+- **Dashboard fetch**: server component passes `headers()` so session cookie travels.
+- **key prop on dialogs**: `key={editing ? edit-${id} : "create"}` forces remount.
 - **useDebounce(300ms)**: search fires 300ms after user stops typing.
-  Page resets to 1 when query changes.
-- **Decimal serialization**: Prisma `Decimal` must be cast to `Number` before
-  JSON response — not serializable natively.
-- **params in Next.js 16**: `params` is `Promise<{id}>` — must `await params`
-  before destructuring in route handlers.
-- **Logo placeholder**: `Scissors` icon is temporary. Will become dynamic based
-  on business type in Settings phase.
-- **DB environments**: local PostgreSQL 17 for dev (no VPN dependency),
-  Neon for prod. URLs are equal in local (no pooling needed).
+- **Decimal serialization**: Prisma Decimal must be cast to Number before JSON response.
+- **params in Next.js 16**: params is Promise<{id}> — must await before destructuring.
 - **Visits immutability**: no PATCH on visits by design. Delete + re-enter.
-- **getAdminMembership helper**: repeated across route handlers. Candidate for
-  extraction to `lib/auth-helpers.ts` in a future refactor pass.
-- **Staff can create clients**: `/api/clients` removed from ADMIN_ONLY_API_ROUTES.
-  Staff needs to register walk-in clients before logging visits.
-- **cf-role cookie**: not HttpOnly by design — role is not sensitive, authorization
-  is always enforced server-side. Client reads it to render admin-only UI elements.
+- **Employee creation**: Prisma transaction (User + Account + BusinessMember).
+  Use ctx.password.hash — never auth.api.signUpEmail (hijacks session).
+- **Employee removal**: delete BusinessMember only, User preserved for visit history.
+- **Settings hydration**: page.tsx is Server Component, passes isAdmin + names as props
+  to settings-client.tsx. Avoids cookie reading on client = no hydration mismatch.
+- **DropdownMenuLabel**: broken in current shadcn/ui version with Base UI backend.
+  Replace with plain styled div. See Phase 8 fix.
+- **suppressHydrationWarning**: on html and body tags in root layout — browser
+  extensions modify DOM before React hydrates, this suppresses false positives.
+- **react-markdown**: required for report viewer. Install with npm install react-markdown.
+- **oslo/password**: deprecated, do not use. Use auth.$context.password.hash.

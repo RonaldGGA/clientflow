@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.SubmitEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -25,20 +25,24 @@ export default function LoginPage() {
       password,
     });
 
+    console.log("1. signIn error:", authError);
+
     if (authError) {
       setError(authError.message ?? "Invalid credentials. Please try again.");
       setLoading(false);
       return;
     }
 
-    // Set the role cookie so middleware can do role-based routing
-    // without hitting the database on every request
-    await fetch("/api/auth/session-init", {
+    const initRes = await fetch("/api/auth/session-init", {
       method: "POST",
       credentials: "include",
     });
 
-    router.push("/");
+    console.log("2. session-init status:", initRes.status);
+    const initData = await initRes.json();
+    console.log("3. session-init data:", initData);
+
+    window.location.href = "/";
   }
 
   return (

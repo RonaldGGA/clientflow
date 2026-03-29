@@ -13,15 +13,20 @@ export default async function DashboardLayout({
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  console.log("LAYOUT SESSION:", session?.user?.email ?? "NULL");
 
   if (!session) {
     redirect("/login");
   }
 
+  console.log("USER ID:", session.user.id);
+
   const membership = await prisma.businessMember.findFirst({
     where: { userId: session.user.id },
     include: { business: true },
   });
+
+  console.log("MEMBERSHIP:", membership?.role ?? "NULL");
 
   if (!membership) {
     redirect("/login");

@@ -19,10 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} min-h-full flex flex-col`}
-        suppressHydrationWarning
-      >
+      <body className={`${inter.variable} min-h-full flex flex-col`}>
         {children}
       </body>
     </html>

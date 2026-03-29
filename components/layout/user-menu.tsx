@@ -6,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -37,8 +36,8 @@ export function UserMenu({ user, isCollapsed }: UserMenuProps) {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.push("/login");
-    router.refresh();
+    document.cookie = "cf-role=; Max-Age=0; path=/";
+    window.location.href = "/login";
   };
 
   return (
@@ -76,21 +75,24 @@ export function UserMenu({ user, isCollapsed }: UserMenuProps) {
         sideOffset={4}
         className="w-56 bg-zinc-900 border-zinc-800"
       >
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-medium text-white">{user.name}</p>
-            <p className="text-xs text-zinc-500">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
+        {/* Replaced DropdownMenuLabel — broken in current shadcn/ui Base UI version */}
+        <div className="px-2 py-1.5">
+          <p className="text-sm font-medium text-white">{user.name}</p>
+          <p className="text-xs text-zinc-500">{user.email}</p>
+        </div>
+
         <DropdownMenuSeparator className="bg-zinc-800" />
+
         <DropdownMenuItem
+          onClick={() => router.push("/settings")}
           className="gap-2 text-zinc-400 focus:text-white focus:bg-zinc-800 cursor-pointer"
-          disabled
         >
           <User className="h-4 w-4" />
           Profile
         </DropdownMenuItem>
+
         <DropdownMenuSeparator className="bg-zinc-800" />
+
         <DropdownMenuItem
           onClick={handleSignOut}
           className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/10 cursor-pointer"

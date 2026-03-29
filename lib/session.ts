@@ -25,7 +25,10 @@ export async function getServerSession(): Promise<SessionUser | null> {
       headers: headersList,
     });
 
+    console.log("SERVER SESSION 1:", session?.user?.email ?? "NULL");
+
     if (!session?.user) return null;
+    console.log("SERVER SESSION 2:", session?.user?.email ?? "NULL");
 
     // @@unique([businessId, userId]) — findFirst is safe here,
     // but we use the compound unique for clarity
@@ -42,7 +45,8 @@ export async function getServerSession(): Promise<SessionUser | null> {
       businessId: membership?.businessId ?? null,
       role: membership?.role ?? null,
     };
-  } catch {
+  } catch (e) {
+    console.error("getServerSession error:", e);
     return null;
   }
 }
