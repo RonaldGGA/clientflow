@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Clients",
     href: "/clients",
     icon: Users,
-    adminOnly: true,
+    adminOnly: false,
   },
   {
     label: "Visits",

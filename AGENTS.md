@@ -179,6 +179,7 @@ Your job is to write production-quality code, not to produce output fast.
 ## What "Done" Means
 
 A task is done when:
+
 1. The feature works as described in SPEC.md
 2. TypeScript compiles with no errors
 3. No `any` types without justification
