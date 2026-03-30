@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { PrismaClient } from "../app/generated/prisma/client/client";
+import { PrismaClient } from "@/app/generated/prisma/client/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 
