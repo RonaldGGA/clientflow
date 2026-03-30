@@ -28,7 +28,7 @@ async function getDashboardData(): Promise<DashboardData | null> {
       process.env.NEXT_PUBLIC_APP_URL ||
       "https://clientflow-demo.vercel.app" ||
       "http://localhost:3000";
-    const res = await fetch(`${baseUrl}api/dashboard`, {
+    const res = await fetch(`${baseUrl}/api/dashboard`, {
       headers: await headers(),
     });
     if (!res.ok) return null;
