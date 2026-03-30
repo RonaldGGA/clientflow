@@ -1,15 +1,15 @@
 "use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const t = useTranslations("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,40 +25,37 @@ export default function LoginPage() {
       password,
     });
 
-    console.log("1. signIn error:", authError);
-
     if (authError) {
-      setError(authError.message ?? "Invalid credentials. Please try again.");
+      setError(authError.message ?? t("invalidCredentials"));
       setLoading(false);
       return;
     }
 
-    const initRes = await fetch("/api/auth/session-init", {
+    await fetch("/api/auth/session-init", {
       method: "POST",
       credentials: "include",
     });
-
-    console.log("2. session-init status:", initRes.status);
-    const initData = await initRes.json();
-    console.log("3. session-init data:", initData);
 
     window.location.href = "/";
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-zinc-950 px-4">
+      <div className="absolute top-4 right-4">
+        <LocaleSwitcher />
+      </div>
       <Card className="w-full max-w-sm bg-zinc-900 border-zinc-800">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-white">
-            ClientFlow
+            {t("title")}
           </CardTitle>
-          <p className="text-sm text-zinc-400">Sign in to your account</p>
+          <p className="text-sm text-zinc-400">{t("subtitle")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-zinc-300">
-                Email
+                {t("email")}
               </Label>
               <Input
                 id="email"
@@ -73,7 +70,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-zinc-300">
-                Password
+                {t("password")}
               </Label>
               <Input
                 id="password"
@@ -86,19 +83,17 @@ export default function LoginPage() {
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
-
             {error && (
               <p className="text-sm text-red-400 bg-red-950/30 border border-red-900 rounded-md px-3 py-2">
                 {error}
               </p>
             )}
-
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("submitting") : t("submit")}
             </Button>
           </form>
         </CardContent>

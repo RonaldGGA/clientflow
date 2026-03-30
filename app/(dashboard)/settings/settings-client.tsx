@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, X } from "lucide-react";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface SettingsClientProps {
   isAdmin: boolean;
@@ -24,10 +21,6 @@ interface SaveState {
 }
 
 const INITIAL_SAVE: SaveState = { loading: false, success: false, error: null };
-
-// ---------------------------------------------------------------------------
-// Hook — save state
-// ---------------------------------------------------------------------------
 
 function useSaveState() {
   const [state, setState] = useState<SaveState>(INITIAL_SAVE);
@@ -54,6 +47,9 @@ function useSaveState() {
 // ---------------------------------------------------------------------------
 
 function BusinessSection({ initialName }: { initialName: string }) {
+  const t = useTranslations("settings.business");
+  const tCommon = useTranslations("common");
+
   const [businessName, setBusinessName] = useState(initialName);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -64,7 +60,6 @@ function BusinessSection({ initialName }: { initialName: string }) {
     setEditing(true);
     reset();
   }
-
   function handleCancel() {
     setEditing(false);
     reset();
@@ -75,9 +70,7 @@ function BusinessSection({ initialName }: { initialName: string }) {
       setEditing(false);
       return;
     }
-
     start();
-
     try {
       const res = await fetch("/api/settings/business", {
         method: "PATCH",
@@ -86,29 +79,27 @@ function BusinessSection({ initialName }: { initialName: string }) {
       });
       const json = await res.json();
       if (!res.ok) {
-        fail(json.error ?? "Something went wrong");
+        fail(json.error ?? tCommon("error"));
         return;
       }
       setBusinessName(draft.trim());
       setEditing(false);
       succeed();
     } catch {
-      fail("Network error. Please try again.");
+      fail(tCommon("error"));
     }
   }
 
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Business</h2>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          Update your business information.
-        </p>
+        <h2 className="text-lg font-semibold text-white">{t("title")}</h2>
+        <p className="text-sm text-zinc-400 mt-0.5">{t("subtitle")}</p>
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-4 max-w-md">
         <div className="space-y-1.5">
-          <Label className="text-zinc-300">Business name</Label>
+          <Label className="text-zinc-300">{t("name")}</Label>
 
           {!editing ? (
             <div className="flex items-center justify-between gap-3">
@@ -140,23 +131,21 @@ function BusinessSection({ initialName }: { initialName: string }) {
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-
               {state.error && (
                 <p className="text-sm text-red-400">{state.error}</p>
               )}
-
               <Button
                 onClick={handleSave}
                 disabled={state.loading}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white"
               >
-                {state.loading ? "Saving..." : "Save"}
+                {state.loading ? tCommon("saving") : t("saveButton")}
               </Button>
             </div>
           )}
 
           {state.success && !editing && (
-            <p className="text-sm text-emerald-400">Business name updated.</p>
+            <p className="text-sm text-emerald-400">{t("updated")}</p>
           )}
         </div>
       </div>
@@ -175,6 +164,10 @@ function AccountSection({
   initialName: string;
   initialEmail: string;
 }) {
+  const t = useTranslations("settings.account");
+  const tPassword = useTranslations("settings.password");
+  const tCommon = useTranslations("common");
+
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -195,7 +188,6 @@ function AccountSection({
     setEditingProfile(true);
     profileSave.reset();
   }
-
   function handleCancelProfile() {
     setEditingProfile(false);
     profileSave.reset();
@@ -214,7 +206,7 @@ function AccountSection({
       });
       const json = await res.json();
       if (!res.ok) {
-        profileSave.fail(json.error ?? "Something went wrong");
+        profileSave.fail(json.error ?? tCommon("error"));
         return;
       }
       setName(draftName.trim());
@@ -222,16 +214,15 @@ function AccountSection({
       setEditingProfile(false);
       profileSave.succeed();
     } catch {
-      profileSave.fail("Network error. Please try again.");
+      profileSave.fail(tCommon("error"));
     }
   }
 
   async function handleSavePassword() {
     if (newPassword !== confirmPassword) {
-      passwordSave.fail("New passwords do not match");
+      passwordSave.fail(tPassword("mismatch"));
       return;
     }
-
     passwordSave.start();
     try {
       const res = await fetch("/api/settings/account", {
@@ -241,7 +232,11 @@ function AccountSection({
       });
       const json = await res.json();
       if (!res.ok) {
-        passwordSave.fail(json.error ?? "Something went wrong");
+        passwordSave.fail(
+          json.error === "Incorrect password"
+            ? tPassword("incorrect")
+            : (json.error ?? tCommon("error")),
+        );
         return;
       }
       setCurrentPassword("");
@@ -250,7 +245,7 @@ function AccountSection({
       setEditingPassword(false);
       passwordSave.succeed();
     } catch {
-      passwordSave.fail("Network error. Please try again.");
+      passwordSave.fail(tCommon("error"));
     }
   }
 
@@ -265,16 +260,16 @@ function AccountSection({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Account</h2>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          Update your personal information and password.
-        </p>
+        <h2 className="text-lg font-semibold text-white">{t("title")}</h2>
+        <p className="text-sm text-zinc-400 mt-0.5">{t("subtitle")}</p>
       </div>
 
       {/* Profile card */}
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-4 max-w-md">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-400 font-medium">Profile</p>
+          <p className="text-sm text-zinc-400 font-medium">
+            {t("profileTitle")}
+          </p>
           {!editingProfile && (
             <Button
               variant="ghost"
@@ -290,18 +285,18 @@ function AccountSection({
         {!editingProfile ? (
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-zinc-500 mb-0.5">Name</p>
+              <p className="text-xs text-zinc-500 mb-0.5">{t("name")}</p>
               <p className="text-white text-sm">{name || "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 mb-0.5">Email</p>
+              <p className="text-xs text-zinc-500 mb-0.5">{t("email")}</p>
               <p className="text-white text-sm">{email || "—"}</p>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Name</Label>
+              <Label className="text-zinc-300">{t("name")}</Label>
               <Input
                 value={draftName}
                 onChange={(e) => setDraftName(e.target.value)}
@@ -310,7 +305,7 @@ function AccountSection({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Email</Label>
+              <Label className="text-zinc-300">{t("email")}</Label>
               <Input
                 type="email"
                 value={draftEmail}
@@ -318,39 +313,41 @@ function AccountSection({
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
             </div>
-
             {profileSave.state.error && (
               <p className="text-sm text-red-400">{profileSave.state.error}</p>
             )}
-
             <div className="flex gap-2">
               <Button
                 onClick={handleSaveProfile}
                 disabled={profileSave.state.loading}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white"
               >
-                {profileSave.state.loading ? "Saving..." : "Save"}
+                {profileSave.state.loading
+                  ? tCommon("saving")
+                  : t("saveButton")}
               </Button>
               <Button
                 variant="ghost"
                 onClick={handleCancelProfile}
                 className="text-zinc-400 hover:text-white"
               >
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </div>
           </div>
         )}
 
         {profileSave.state.success && !editingProfile && (
-          <p className="text-sm text-emerald-400">Profile updated.</p>
+          <p className="text-sm text-emerald-400">{t("updated")}</p>
         )}
       </div>
 
       {/* Password card */}
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-4 max-w-md">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-400 font-medium">Password</p>
+          <p className="text-sm text-zinc-400 font-medium">
+            {tPassword("title")}
+          </p>
           {!editingPassword && (
             <Button
               variant="ghost"
@@ -371,7 +368,7 @@ function AccountSection({
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Current password</Label>
+              <Label className="text-zinc-300">{tPassword("current")}</Label>
               <Input
                 type="password"
                 value={currentPassword}
@@ -381,17 +378,16 @@ function AccountSection({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">New password</Label>
+              <Label className="text-zinc-300">{tPassword("new")}</Label>
               <Input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 8 characters"
-                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                className="bg-zinc-800 border-zinc-700 text-white"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Confirm new password</Label>
+              <Label className="text-zinc-300">{tPassword("confirm")}</Label>
               <Input
                 type="password"
                 value={confirmPassword}
@@ -399,32 +395,32 @@ function AccountSection({
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
             </div>
-
             {passwordSave.state.error && (
               <p className="text-sm text-red-400">{passwordSave.state.error}</p>
             )}
-
             <div className="flex gap-2">
               <Button
                 onClick={handleSavePassword}
                 disabled={passwordSave.state.loading}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white"
               >
-                {passwordSave.state.loading ? "Saving..." : "Save"}
+                {passwordSave.state.loading
+                  ? tCommon("saving")
+                  : tPassword("saveButton")}
               </Button>
               <Button
                 variant="ghost"
                 onClick={handleCancelPassword}
                 className="text-zinc-400 hover:text-white"
               >
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </div>
           </div>
         )}
 
         {passwordSave.state.success && !editingPassword && (
-          <p className="text-sm text-emerald-400">Password updated.</p>
+          <p className="text-sm text-emerald-400">{tPassword("updated")}</p>
         )}
       </div>
     </section>
@@ -432,7 +428,7 @@ function AccountSection({
 }
 
 // ---------------------------------------------------------------------------
-// Root client component
+// Root
 // ---------------------------------------------------------------------------
 
 export function SettingsClient({
@@ -441,13 +437,13 @@ export function SettingsClient({
   userName,
   userEmail,
 }: SettingsClientProps) {
+  const t = useTranslations("settings");
+
   return (
     <div className="p-6 space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Settings</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          Manage your business and account preferences.
-        </p>
+        <h1 className="text-2xl font-semibold text-white">{t("title")}</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">{t("subtitle")}</p>
       </div>
 
       {isAdmin && <BusinessSection initialName={businessName} />}

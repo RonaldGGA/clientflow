@@ -1,16 +1,13 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function getLastMonday(): Date {
   const today = new Date();
-  const day = today.getDay(); // 0 = Sunday
-  const diff = day === 0 ? 13 : day + 6; // go back to last Monday
+  const day = today.getDay();
+  const diff = day === 0 ? 13 : day + 6;
   const monday = new Date(today);
   monday.setDate(today.getDate() - diff);
   monday.setHours(0, 0, 0, 0);
@@ -23,38 +20,29 @@ function addWeeks(date: Date, weeks: number): Date {
   return d;
 }
 
-function formatWeekLabel(monday: Date): string {
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-  return `${fmt(monday)} – ${fmt(sunday)}, ${sunday.getFullYear()}`;
-}
-
 function toISODate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 interface WeekPickerProps {
-  value: Date; // always a Monday
+  value: Date;
   onChange: (monday: Date) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function WeekPicker({ value, onChange }: WeekPickerProps) {
-  const lastMonday = getLastMonday();
+  const t = useTranslations("reports");
+  const locale = useLocale();
 
-  // Can't navigate into the future past the last completed week
+  const lastMonday = getLastMonday();
   const isAtMax = toISODate(value) >= toISODate(lastMonday);
+
+  const sunday = new Date(value);
+  sunday.setDate(value.getDate() + 6);
+
+  const dateLocale = locale === "es" ? "es-CU" : "en-US";
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+  const weekLabel = `${fmt(value)} – ${fmt(sunday)}, ${sunday.getFullYear()}`;
 
   function goBack() {
     onChange(addWeeks(value, -1));
@@ -78,11 +66,9 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
       >
         <ChevronLeft className="w-4 h-4" />
       </Button>
-
       <span className="text-white font-medium w-52 text-center text-sm">
-        {formatWeekLabel(value)}
+        {weekLabel}
       </span>
-
       <Button
         variant="outline"
         size="icon"
@@ -92,7 +78,6 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
       >
         <ChevronRight className="w-4 h-4" />
       </Button>
-
       {!isAtMax && (
         <Button
           variant="ghost"
@@ -100,7 +85,7 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
           onClick={goToLastWeek}
           className="text-zinc-500 hover:text-white text-xs"
         >
-          Last week
+          {t("lastWeek")}
         </Button>
       )}
     </div>

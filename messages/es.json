@@ -1,0 +1,221 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "loading": "Cargando...",
+    "saving": "Guardando...",
+    "deleting": "Eliminando...",
+    "noResults": "No se encontraron resultados",
+    "error": "Algo salió mal. Por favor intenta de nuevo.",
+    "confirmDelete": "Esta acción no se puede deshacer."
+  },
+  "nav": {
+    "dashboard": "Inicio",
+    "clients": "Clientes",
+    "visits": "Visitas",
+    "employees": "Empleados",
+    "reports": "Reportes",
+    "settings": "Configuración",
+    "services": "Servicios"
+  },
+  "userMenu": {
+    "profile": "Perfil",
+    "signOut": "Cerrar sesión"
+  },
+  "localeSwitcher": {
+    "label": "Idioma"
+  },
+  "login": {
+    "title": "ClientFlow",
+    "subtitle": "Inicia sesión en tu cuenta",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "submit": "Iniciar sesión",
+    "submitting": "Iniciando sesión...",
+    "invalidCredentials": "Credenciales inválidas. Por favor intenta de nuevo."
+  },
+  "dashboard": {
+    "title": "Inicio",
+    "subtitle": "Resumen de la semana actual",
+    "error": "Error al cargar el dashboard. Intenta refrescar.",
+    "metrics": {
+      "weeklyRevenue": "Ingresos Semanales",
+      "weeklyRevenueDesc": "Total de esta semana",
+      "activeClients": "Clientes Activos",
+      "activeClientsDesc": "Total registrados",
+      "weeklyVisits": "Visitas Esta Semana",
+      "weeklyVisitsDesc": "Lun – Dom",
+      "topService": "Servicio Top",
+      "topServiceDesc": "Más reservado esta semana"
+    },
+    "recentVisits": {
+      "title": "Visitas Recientes",
+      "empty": "No hay visitas registradas aún."
+    },
+    "visitsChart": {
+      "title": "Visitas esta semana",
+      "label": "Visitas"
+    }
+  },
+  "clients": {
+    "title": "Clientes",
+    "searchPlaceholder": "Buscar clientes...",
+    "addClient": "Agregar Cliente",
+    "table": {
+      "name": "Nombre",
+      "phone": "Teléfono",
+      "notes": "Notas",
+      "createdAt": "Creado",
+      "actions": "Acciones"
+    },
+    "empty": "No se encontraron clientes.",
+    "form": {
+      "createTitle": "Agregar Cliente",
+      "editTitle": "Editar Cliente",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre del cliente",
+      "phone": "Teléfono",
+      "phonePlaceholder": "+53 5 000 0000",
+      "notes": "Notas",
+      "notesPlaceholder": "Alguna nota sobre este cliente..."
+    },
+    "deleteDialog": {
+      "title": "Eliminar Cliente",
+      "description": "¿Estás seguro de que quieres eliminar a {name}? Esta acción no se puede deshacer."
+    }
+  },
+  "visits": {
+    "title": "Visitas",
+    "addVisit": "Agregar Visita",
+    "table": {
+      "client": "Cliente",
+      "service": "Servicio",
+      "staff": "Empleado",
+      "price": "Precio",
+      "notes": "Notas",
+      "date": "Fecha",
+      "actions": "Acciones"
+    },
+    "empty": "No se encontraron visitas.",
+    "filters": {
+      "startDate": "Fecha inicio",
+      "endDate": "Fecha fin",
+      "staff": "Empleado",
+      "allStaff": "Todos"
+    },
+    "form": {
+      "title": "Agregar Visita",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleccionar cliente",
+      "service": "Servicio",
+      "servicePlaceholder": "Seleccionar servicio",
+      "price": "Precio",
+      "notes": "Notas",
+      "notesPlaceholder": "Alguna nota sobre esta visita..."
+    },
+    "deleteDialog": {
+      "title": "Eliminar Visita",
+      "description": "¿Estás seguro de que quieres eliminar esta visita? Esta acción no se puede deshacer."
+    }
+  },
+  "employees": {
+    "title": "Empleados",
+    "addEmployee": "Agregar Empleado",
+    "table": {
+      "name": "Nombre",
+      "email": "Correo",
+      "role": "Rol",
+      "joinedAt": "Se unió",
+      "actions": "Acciones"
+    },
+    "empty": "No se encontraron empleados.",
+    "roles": {
+      "admin": "Administrador",
+      "staff": "Empleado"
+    },
+    "form": {
+      "createTitle": "Agregar Empleado",
+      "editTitle": "Editar Empleado",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre completo",
+      "email": "Correo",
+      "emailPlaceholder": "correo@ejemplo.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Mín. 8 caracteres",
+      "role": "Rol"
+    },
+    "deleteDialog": {
+      "title": "Remover Empleado",
+      "description": "¿Estás seguro de que quieres remover a {name}? Perderá el acceso inmediatamente. Su historial de visitas se conservará."
+    }
+  },
+  "reports": {
+    "title": "Reportes",
+    "subtitle": "Resúmenes generados por IA de la actividad de tu negocio",
+    "generate": "Generar Reporte",
+    "regenerate": "Regenerar",
+    "generating": "Generando...",
+    "checking": "Buscando reporte existente...",
+    "weekOf": "Semana del {date}",
+    "generatedOn": "Generado el {date}",
+    "lastWeek": "Semana anterior",
+    "empty": "No hay reporte generado para esta semana.",
+    "emptyHint": "Haz clic en \"Generar Reporte\" para crear uno.",
+    "generatingHint": "Esto puede tardar hasta 15 segundos."
+  },
+  "settings": {
+    "title": "Configuración",
+    "subtitle": "Gestiona las preferencias de tu negocio y cuenta.",
+    "business": {
+      "title": "Negocio",
+      "subtitle": "Actualiza la información de tu negocio.",
+      "name": "Nombre del Negocio",
+      "saveButton": "Guardar Cambios",
+      "updated": "Nombre del negocio actualizado."
+    },
+    "account": {
+      "title": "Cuenta",
+      "subtitle": "Actualiza tu información personal y contraseña.",
+      "profileTitle": "Perfil",
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "saveButton": "Guardar Cambios",
+      "updated": "Perfil actualizado."
+    },
+    "password": {
+      "title": "Cambiar Contraseña",
+      "current": "Contraseña Actual",
+      "new": "Nueva Contraseña",
+      "confirm": "Confirmar Nueva Contraseña",
+      "saveButton": "Actualizar Contraseña",
+      "mismatch": "Las contraseñas no coinciden.",
+      "incorrect": "La contraseña actual es incorrecta.",
+      "updated": "Contraseña actualizada."
+    },
+    "services": {
+      "title": "Servicios",
+      "addService": "Agregar Servicio",
+      "table": {
+        "name": "Nombre",
+        "basePrice": "Precio Base",
+        "actions": "Acciones"
+      },
+      "empty": "No se encontraron servicios.",
+      "form": {
+        "createTitle": "Agregar Servicio",
+        "editTitle": "Editar Servicio",
+        "name": "Nombre",
+        "namePlaceholder": "Nombre del servicio",
+        "basePrice": "Precio Base"
+      },
+      "deleteDialog": {
+        "title": "Eliminar Servicio",
+        "description": "¿Estás seguro de que quieres eliminar {name}? Esta acción no se puede deshacer."
+      }
+    }
+  }
+}

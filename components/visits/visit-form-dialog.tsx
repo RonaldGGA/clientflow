@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -20,15 +21,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface Client {
   id: string;
   name: string;
 }
-
 interface Service {
   id: string;
   name: string;
@@ -41,15 +37,14 @@ interface VisitFormDialogProps {
   onSuccess: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function VisitFormDialog({
   open,
   onOpenChange,
   onSuccess,
 }: VisitFormDialogProps) {
+  const t = useTranslations("visits.form");
+  const tCommon = useTranslations("common");
+
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [clientId, setClientId] = useState("");
@@ -60,13 +55,10 @@ export function VisitFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // Fetch clients and services when dialog opens
   useEffect(() => {
     if (!open) return;
-
     setLoadingOptions(true);
     setError(null);
-
     Promise.all([
       fetch("/api/clients?page=1&pageSize=200").then((r) => r.json()),
       fetch("/api/services").then((r) => r.json()),
@@ -75,11 +67,10 @@ export function VisitFormDialog({
         setClients(clientsRes.data?.clients ?? []);
         setServices(servicesRes.data?.services ?? []);
       })
-      .catch(() => setError("Failed to load clients and services"))
+      .catch(() => setError(tCommon("error")))
       .finally(() => setLoadingOptions(false));
-  }, [open]);
+  }, [open, tCommon]);
 
-  // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       setClientId("");
@@ -90,35 +81,29 @@ export function VisitFormDialog({
     }
   }, [open]);
 
-  // When a service is selected, default actualPrice to its basePrice
   function handleServiceChange(value: string) {
     setServiceId(value);
     const selected = services.find((s) => s.id === value);
-    if (selected) {
-      setActualPrice(String(selected.basePrice));
-    }
+    if (selected) setActualPrice(String(selected.basePrice));
   }
 
   async function handleSubmit() {
     setError(null);
-
     if (!clientId) {
-      setError("Please select a client");
+      setError(t("clientPlaceholder"));
       return;
     }
     if (!serviceId) {
-      setError("Please select a service");
+      setError(t("servicePlaceholder"));
       return;
     }
-
     const price = parseFloat(actualPrice);
     if (isNaN(price) || price < 0) {
-      setError("Price must be a valid non-negative number");
+      setError(tCommon("error"));
       return;
     }
 
     setLoading(true);
-
     try {
       const res = await fetch("/api/visits", {
         method: "POST",
@@ -130,18 +115,15 @@ export function VisitFormDialog({
           notes: notes.trim() || undefined,
         }),
       });
-
       const json = await res.json();
-
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong");
+        setError(json.error ?? tCommon("error"));
         return;
       }
-
       onSuccess();
       onOpenChange(false);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -151,20 +133,19 @@ export function VisitFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
         <DialogHeader>
-          <DialogTitle className="text-white">Log Visit</DialogTitle>
+          <DialogTitle className="text-white">{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Client selector */}
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">Client</Label>
+            <Label className="text-zinc-300">{t("client")}</Label>
             <Select
               value={clientId}
               onValueChange={(v) => setClientId(v ?? "")}
               disabled={loadingOptions}
             >
               <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                <SelectValue placeholder="Select a client" />
+                <SelectValue placeholder={t("clientPlaceholder")} />
               </SelectTrigger>
               <SelectContent className="bg-zinc-800 border-zinc-700">
                 {clients.map((c) => (
@@ -180,16 +161,15 @@ export function VisitFormDialog({
             </Select>
           </div>
 
-          {/* Service selector */}
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">Service</Label>
+            <Label className="text-zinc-300">{t("service")}</Label>
             <Select
               value={serviceId}
               onValueChange={(v) => handleServiceChange(v ?? "")}
               disabled={loadingOptions}
             >
               <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                <SelectValue placeholder="Select a service" />
+                <SelectValue placeholder={t("servicePlaceholder")} />
               </SelectTrigger>
               <SelectContent className="bg-zinc-800 border-zinc-700">
                 {services.map((s) => (
@@ -205,14 +185,8 @@ export function VisitFormDialog({
             </Select>
           </div>
 
-          {/* Price override */}
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">
-              Price{" "}
-              <span className="text-zinc-500 font-normal text-xs">
-                (defaults to service base price)
-              </span>
-            </Label>
+            <Label className="text-zinc-300">{t("price")}</Label>
             <Input
               type="number"
               min={0}
@@ -224,18 +198,12 @@ export function VisitFormDialog({
             />
           </div>
 
-          {/* Notes */}
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">
-              Notes{" "}
-              <span className="text-zinc-500 font-normal text-xs">
-                (optional)
-              </span>
-            </Label>
+            <Label className="text-zinc-300">{t("notes")}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes..."
+              placeholder={t("notesPlaceholder")}
               rows={3}
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 resize-none"
             />
@@ -251,14 +219,14 @@ export function VisitFormDialog({
             disabled={loading}
             className="text-zinc-400 hover:text-white"
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={loading || loadingOptions}
             className="bg-emerald-600 hover:bg-emerald-500 text-white"
           >
-            {loading ? "Saving..." : "Log Visit"}
+            {loading ? tCommon("saving") : t("title")}
           </Button>
         </DialogFooter>
       </DialogContent>

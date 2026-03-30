@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,7 +28,7 @@ interface ServiceFormDialogProps {
 
 interface FormData {
   name: string;
-  basePrice: string; // string in the input, parsed to number on submit
+  basePrice: string;
 }
 
 export function ServiceFormDialog({
@@ -36,6 +37,9 @@ export function ServiceFormDialog({
   service,
   onSuccess,
 }: ServiceFormDialogProps) {
+  const t = useTranslations("settings.services");
+  const tCommon = useTranslations("common");
+
   const isEdit = Boolean(service);
 
   const [form, setForm] = useState<FormData>({
@@ -63,10 +67,10 @@ export function ServiceFormDialog({
       setError("Price must be a positive number.");
       return;
     }
-    // Cap at 2 decimal places client-side before sending
-    const roundedPrice = Math.round(price * 100) / 100;
 
+    const roundedPrice = Math.round(price * 100) / 100;
     setLoading(true);
+
     try {
       const url = isEdit ? `/api/services/${service!.id}` : "/api/services";
       const method = isEdit ? "PATCH" : "POST";
@@ -83,14 +87,14 @@ export function ServiceFormDialog({
 
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong.");
+        setError(json.error ?? tCommon("error"));
         return;
       }
 
       onSuccess();
       onOpenChange(false);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -101,21 +105,21 @@ export function ServiceFormDialog({
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-white">
-            {isEdit ? "Edit service" : "New service"}
+            {isEdit ? t("form.editTitle") : t("form.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 py-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name" className="text-zinc-300 text-sm">
-              Name <span className="text-red-400">*</span>
+              {t("form.name")} <span className="text-red-400">*</span>
             </Label>
             <Input
               id="name"
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="e.g. Classic Haircut"
+              placeholder={t("form.namePlaceholder")}
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
               autoFocus
             />
@@ -123,7 +127,7 @@ export function ServiceFormDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="basePrice" className="text-zinc-300 text-sm">
-              Base price <span className="text-red-400">*</span>
+              {t("form.basePrice")} <span className="text-red-400">*</span>
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm select-none">
@@ -141,9 +145,6 @@ export function ServiceFormDialog({
                 className="pl-7 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
               />
             </div>
-            <p className="text-xs text-zinc-600">
-              This is the default price. Visits can override it.
-            </p>
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
@@ -156,7 +157,7 @@ export function ServiceFormDialog({
               className="text-zinc-400 hover:text-white hover:bg-zinc-800"
               disabled={loading}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               type="submit"
@@ -164,10 +165,10 @@ export function ServiceFormDialog({
               className="bg-emerald-600 hover:bg-emerald-500 text-white"
             >
               {loading
-                ? "Saving..."
+                ? tCommon("saving")
                 : isEdit
-                  ? "Save changes"
-                  : "Create service"}
+                  ? tCommon("save")
+                  : tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

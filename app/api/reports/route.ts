@@ -6,11 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const LLM_TIMEOUT_MS = 15_000;
-
-// ---------------------------------------------------------------------------
-// Helpers — auth
-// ---------------------------------------------------------------------------
+const LLM_TIMEOUT_MS = 30_000;
 
 async function getAdminMembership(userId: string) {
   return prisma.businessMember.findFirst({
@@ -19,18 +15,12 @@ async function getAdminMembership(userId: string) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Helpers — date range
-// ---------------------------------------------------------------------------
-
 function getWeekRange(weekStart: Date): { start: Date; end: Date } {
   const start = new Date(weekStart);
   start.setHours(0, 0, 0, 0);
-
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
   end.setHours(23, 59, 59, 999);
-
   return { start, end };
 }
 
@@ -39,10 +29,6 @@ function getPreviousWeekRange(weekStart: Date): { start: Date; end: Date } {
   prevStart.setDate(prevStart.getDate() - 7);
   return getWeekRange(prevStart);
 }
-
-// ---------------------------------------------------------------------------
-// Helpers — weekly stats
-// ---------------------------------------------------------------------------
 
 async function computeWeeklyStats(
   businessId: string,
@@ -78,14 +64,13 @@ async function computeWeeklyStats(
     0,
   );
 
-  // Top services
   const serviceMap = new Map<string, { count: number; revenue: number }>();
   for (const v of currentVisits) {
     const key = v.service.name;
-    const prev = serviceMap.get(key) ?? { count: 0, revenue: 0 };
+    const existing = serviceMap.get(key) ?? { count: 0, revenue: 0 };
     serviceMap.set(key, {
-      count: prev.count + 1,
-      revenue: prev.revenue + Number(v.actualPrice),
+      count: existing.count + 1,
+      revenue: existing.revenue + Number(v.actualPrice),
     });
   }
   const topServices = Array.from(serviceMap.entries())
@@ -93,7 +78,6 @@ async function computeWeeklyStats(
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Top clients
   const clientMap = new Map<string, number>();
   for (const v of currentVisits) {
     clientMap.set(v.client.name, (clientMap.get(v.client.name) ?? 0) + 1);
@@ -103,14 +87,13 @@ async function computeWeeklyStats(
     .sort((a, b) => b.visits - a.visits)
     .slice(0, 5);
 
-  // Staff activity
   const staffMap = new Map<string, { visits: number; revenue: number }>();
   for (const v of currentVisits) {
     const key = v.staff.name ?? "Unknown";
-    const prev = staffMap.get(key) ?? { visits: 0, revenue: 0 };
+    const existing = staffMap.get(key) ?? { visits: 0, revenue: 0 };
     staffMap.set(key, {
-      visits: prev.visits + 1,
-      revenue: prev.revenue + Number(v.actualPrice),
+      visits: existing.visits + 1,
+      revenue: existing.revenue + Number(v.actualPrice),
     });
   }
   const staffActivity = Array.from(staffMap.entries())
@@ -139,14 +122,9 @@ async function computeWeeklyStats(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Helpers — LLM calls
-// ---------------------------------------------------------------------------
-
 async function callGemini(prompt: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
-
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
@@ -156,7 +134,7 @@ async function callGemini(prompt: string): Promise<string> {
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
         }),
       },
     );
@@ -173,7 +151,6 @@ async function callGemini(prompt: string): Promise<string> {
 async function callOpenRouter(prompt: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
-
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -216,12 +193,10 @@ async function generateReport(prompt: string): Promise<string> {
 
 // ---------------------------------------------------------------------------
 // GET /api/reports?weekStart=YYYY-MM-DD
-// Returns stored report for that week if exists, null otherwise.
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
-
   if (!session?.user) {
     return NextResponse.json(
       { data: null, error: "Unauthorized" },
@@ -254,7 +229,6 @@ export async function GET(request: NextRequest) {
   }
 
   const { start } = getWeekRange(weekStart);
-
   const report = await prisma.report.findFirst({
     where: { businessId: adminMembership.businessId, weekStart: start },
   });
@@ -264,16 +238,11 @@ export async function GET(request: NextRequest) {
 
 // ---------------------------------------------------------------------------
 // POST /api/reports
-// Body: { weekStart: string, force?: boolean }
-// If report exists and force=false → return stored report.
-// If force=true → regenerate and overwrite.
-// Note: Report has no @@unique on businessId+weekStart in schema,
-// so we use findFirst + delete + create instead of upsert.
+// Body: { weekStart: string, force?: boolean, locale?: string }
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
-
   if (!session?.user) {
     return NextResponse.json(
       { data: null, error: "Unauthorized" },
@@ -299,9 +268,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { weekStart: weekStartRaw, force = false } = body as {
+  const {
+    weekStart: weekStartRaw,
+    force = false,
+    locale = "en",
+  } = body as {
     weekStart?: unknown;
     force?: unknown;
+    locale?: string;
   };
 
   if (!weekStartRaw || typeof weekStartRaw !== "string") {
@@ -323,7 +297,6 @@ export async function POST(request: NextRequest) {
   const businessId = adminMembership.businessId;
   const businessName = adminMembership.business.name;
 
-  // Return existing report unless force=true
   const existing = await prisma.report.findFirst({
     where: { businessId, weekStart: start },
   });
@@ -332,9 +305,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: { report: existing }, error: null });
   }
 
-  // Generate report
   const stats = await computeWeeklyStats(businessId, businessName, weekStart);
-  const prompt = buildReportPrompt(stats);
+  const prompt = buildReportPrompt(stats, locale);
 
   let content: string;
   try {
@@ -349,7 +321,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Delete existing if force regenerating, then create fresh
   if (existing) {
     await prisma.report.delete({ where: { id: existing.id } });
   }

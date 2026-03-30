@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Table,
   TableBody,
@@ -15,10 +16,6 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { EmployeeFormDialog } from "@/components/employees/employee-form-dialog";
 import { DeleteEmployeeDialog } from "@/components/employees/delete-employee-dialog";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface Member {
   id: string;
   role: string;
@@ -26,15 +23,14 @@ interface Member {
   user: { id: string; name: string | null; email: string };
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
-
 export default function EmployeesPage() {
+  const t = useTranslations("employees");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Member | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
@@ -46,12 +42,12 @@ export default function EmployeesPage() {
       const res = await fetch("/api/employees");
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "Failed to load employees");
+        setError(json.error ?? tCommon("error"));
         return;
       }
       setMembers(json.data.members);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -72,21 +68,22 @@ export default function EmployeesPage() {
   }
 
   function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return new Date(iso).toLocaleDateString(
+      locale === "es" ? "es-CU" : "en-US",
+      { month: "short", day: "numeric", year: "numeric" },
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Employees</h1>
+          <h1 className="text-2xl font-semibold text-white">{t("title")}</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {members.length} team member{members.length !== 1 ? "s" : ""}
+            {members.length}{" "}
+            {locale === "es"
+              ? `miembro${members.length !== 1 ? "s" : ""}`
+              : `team member${members.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <Button
@@ -94,26 +91,28 @@ export default function EmployeesPage() {
           className="bg-emerald-600 hover:bg-emerald-500 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Employee
+          {t("addEmployee")}
         </Button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3">
           <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
-      {/* Table */}
       <div className="rounded-lg border border-zinc-800 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Name</TableHead>
-              <TableHead className="text-zinc-400">Email</TableHead>
-              <TableHead className="text-zinc-400">Role</TableHead>
-              <TableHead className="text-zinc-400">Joined</TableHead>
+              <TableHead className="text-zinc-400">{t("table.name")}</TableHead>
+              <TableHead className="text-zinc-400">
+                {t("table.email")}
+              </TableHead>
+              <TableHead className="text-zinc-400">{t("table.role")}</TableHead>
+              <TableHead className="text-zinc-400">
+                {t("table.joinedAt")}
+              </TableHead>
               <TableHead className="text-zinc-400 w-24" />
             </TableRow>
           </TableHeader>
@@ -124,7 +123,7 @@ export default function EmployeesPage() {
                   colSpan={5}
                   className="text-center text-zinc-500 py-12"
                 >
-                  Loading...
+                  {tCommon("loading")}
                 </TableCell>
               </TableRow>
             ) : members.length === 0 ? (
@@ -133,7 +132,7 @@ export default function EmployeesPage() {
                   colSpan={5}
                   className="text-center text-zinc-500 py-12"
                 >
-                  No employees found.
+                  {t("empty")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -157,7 +156,7 @@ export default function EmployeesPage() {
                           : "bg-zinc-700/50 text-zinc-300 border-zinc-600/30 hover:bg-zinc-700/50"
                       }
                     >
-                      {m.role}
+                      {t(`roles.${m.role as "admin" | "staff"}`)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-zinc-400 text-sm">
@@ -190,7 +189,6 @@ export default function EmployeesPage() {
         </Table>
       </div>
 
-      {/* Dialogs */}
       <EmployeeFormDialog
         key={editing ? `edit-${editing.id}` : "create"}
         open={formOpen}
@@ -198,7 +196,6 @@ export default function EmployeesPage() {
         onSuccess={fetchMembers}
         editing={editing}
       />
-
       <DeleteEmployeeDialog
         member={deleteTarget}
         open={deleteTarget !== null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,18 +34,16 @@ interface FormData {
   notes: string;
 }
 
-// This component is always mounted with a `key` from the parent.
-// When key changes, React remounts it — so useState initializes fresh
-// from the correct client without needing useEffect or manual resets.
 export function ClientFormDialog({
   open,
   onOpenChange,
   client,
   onSuccess,
 }: ClientFormDialogProps) {
+  const t = useTranslations("clients");
+  const tCommon = useTranslations("common");
   const isEdit = Boolean(client);
 
-  // Initializes correctly every mount because of key-based remounting
   const [form, setForm] = useState<FormData>({
     name: client?.name ?? "",
     phone: client?.phone ?? "",
@@ -64,7 +63,7 @@ export function ClientFormDialog({
     setError(null);
 
     if (!form.name.trim()) {
-      setError("Name is required.");
+      setError(t("form.name") + " is required.");
       return;
     }
 
@@ -86,14 +85,14 @@ export function ClientFormDialog({
 
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong.");
+        setError(json.error ?? tCommon("error"));
         return;
       }
 
       onSuccess();
       onOpenChange(false);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -104,21 +103,21 @@ export function ClientFormDialog({
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white">
-            {isEdit ? "Edit client" : "New client"}
+            {isEdit ? t("form.editTitle") : t("form.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 py-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name" className="text-zinc-300 text-sm">
-              Name <span className="text-red-400">*</span>
+              {t("form.name")} <span className="text-red-400">*</span>
             </Label>
             <Input
               id="name"
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="e.g. Juan García"
+              placeholder={t("form.namePlaceholder")}
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
               autoFocus
             />
@@ -126,28 +125,28 @@ export function ClientFormDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="phone" className="text-zinc-300 text-sm">
-              Phone
+              {t("form.phone")}
             </Label>
             <Input
               id="phone"
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              placeholder="e.g. +1 555 123 4567"
+              placeholder={t("form.phonePlaceholder")}
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="notes" className="text-zinc-300 text-sm">
-              Notes
+              {t("form.notes")}
             </Label>
             <Textarea
               id="notes"
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              placeholder="Any relevant notes about this client..."
+              placeholder={t("form.notesPlaceholder")}
               rows={3}
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500 resize-none"
             />
@@ -163,7 +162,7 @@ export function ClientFormDialog({
               className="text-zinc-400 hover:text-white hover:bg-zinc-800"
               disabled={loading}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               type="submit"
@@ -171,10 +170,10 @@ export function ClientFormDialog({
               className="bg-emerald-600 hover:bg-emerald-500 text-white"
             >
               {loading
-                ? "Saving..."
+                ? tCommon("saving")
                 : isEdit
-                  ? "Save changes"
-                  : "Create client"}
+                  ? tCommon("save")
+                  : tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

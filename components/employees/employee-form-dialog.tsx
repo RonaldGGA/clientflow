@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface Member {
   id: string;
   role: string;
@@ -36,16 +33,15 @@ interface EmployeeFormDialogProps {
   editing?: Member | null;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function EmployeeFormDialog({
   open,
   onOpenChange,
   onSuccess,
   editing = null,
 }: EmployeeFormDialogProps) {
+  const t = useTranslations("employees");
+  const tCommon = useTranslations("common");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,14 +51,12 @@ export function EmployeeFormDialog({
 
   const isEditing = editing !== null;
 
-  // Initialize form when editing
   useEffect(() => {
     if (open && editing) {
       setRole(editing.role as "admin" | "staff");
     }
   }, [open, editing]);
 
-  // Reset form on close
   useEffect(() => {
     if (!open) {
       setName("");
@@ -92,7 +86,6 @@ export function EmployeeFormDialog({
     }
 
     setLoading(true);
-
     try {
       const res = isEditing
         ? await fetch(`/api/employees/${editing.id}`, {
@@ -112,16 +105,15 @@ export function EmployeeFormDialog({
           });
 
       const json = await res.json();
-
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong");
+        setError(json.error ?? tCommon("error"));
         return;
       }
 
       onSuccess();
       onOpenChange(false);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -132,55 +124,51 @@ export function EmployeeFormDialog({
       <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-white">
-            {isEditing ? "Edit Employee" : "Add Employee"}
+            {isEditing ? t("form.editTitle") : t("form.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Name — create only */}
           {!isEditing && (
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Name</Label>
+              <Label className="text-zinc-300">{t("form.name")}</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+                placeholder={t("form.namePlaceholder")}
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
           )}
 
-          {/* Email — create only */}
           {!isEditing && (
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Email</Label>
+              <Label className="text-zinc-300">{t("form.email")}</Label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@example.com"
+                placeholder={t("form.emailPlaceholder")}
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
           )}
 
-          {/* Password — create only */}
           {!isEditing && (
             <div className="space-y-1.5">
-              <Label className="text-zinc-300">Password</Label>
+              <Label className="text-zinc-300">{t("form.password")}</Label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters"
+                placeholder={t("form.passwordPlaceholder")}
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
           )}
 
-          {/* Role — always visible */}
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">Role</Label>
+            <Label className="text-zinc-300">{t("form.role")}</Label>
             <Select
               value={role}
               onValueChange={(v) =>
@@ -195,13 +183,13 @@ export function EmployeeFormDialog({
                   value="staff"
                   className="text-white focus:bg-zinc-700"
                 >
-                  Staff
+                  {t("roles.staff")}
                 </SelectItem>
                 <SelectItem
                   value="admin"
                   className="text-white focus:bg-zinc-700"
                 >
-                  Admin
+                  {t("roles.admin")}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -217,7 +205,7 @@ export function EmployeeFormDialog({
             disabled={loading}
             className="text-zinc-400 hover:text-white"
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -225,10 +213,10 @@ export function EmployeeFormDialog({
             className="bg-emerald-600 hover:bg-emerald-500 text-white"
           >
             {loading
-              ? "Saving..."
+              ? tCommon("saving")
               : isEditing
-                ? "Save Changes"
-                : "Add Employee"}
+                ? tCommon("save")
+                : tCommon("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

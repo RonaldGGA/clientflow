@@ -30,6 +30,7 @@ The system is business-agnostic — the demo uses barbershop data.
 | Design | Dark theme, Inter font, emerald accent (#10b981) | Defined below |
 | LLM | Google Gemini 2.5 Flash (primary) | Stable free tier, 250 RPD |
 | LLM Fallback | OpenRouter (free tier) | Backup if Gemini fails |
+| i18n | next-intl | Standard for Next.js App Router, supports Server + Client Components |
 | Deploy | Vercel + Neon | Zero config, matches stack |
 
 ---
@@ -58,18 +59,38 @@ The system is business-agnostic — the demo uses barbershop data.
 - **cf-role cookie**: `httpOnly: false` by design. Client reads it to render admin-only
   UI elements. Authorization always enforced server-side independently.
 - **Employee creation**: use `auth.$context` → `ctx.password.hash(password)`.
-  Never use `auth.api.signUpEmail` in route handlers — it creates a new session and
-  overwrites the caller's cookies, logging them out.
+  Never use `auth.api.signUpEmail` anywhere — it requires HTTP context and does not
+  reliably create the Account record with hashed credentials outside route handlers.
+  In route handlers it also overwrites the caller's session cookies, logging them out.
+- **Seed uses same pattern as employee creation**: Prisma transaction with
+  `ctx.password.hash` creates User + Account + BusinessMember. Never use
+  `auth.api.signUpEmail` in seed scripts.
 - **Employee removal = desvincular**: delete `BusinessMember` only. `User` stays in DB
   to preserve visit history. Employee loses access immediately.
 - **Settings page = Server Component + Client Component split**: `page.tsx` is a Server
   Component that reads session, role, and business name server-side and passes them as
   props to `settings-client.tsx`. Avoids hydration mismatch from reading cookies client-side.
 - **oslo/password is deprecated**: do not use. Use `auth.$context.password.hash`.
+- **Sign out uses window.location.href**: `router.push` is a soft navigation — the browser
+  does not send a fresh HTTP request, so the session cookie is still present when the
+  middleware runs. `window.location.href` forces a full HTTP request with clean state.
+  `cf-role` must also be manually cleared on sign out via `document.cookie`.
+- **Login form handler type**: use `React.FormEvent<HTMLFormElement>`, not
+  `React.SubmitEvent` (does not exist in React types). Wrong type silently prevents
+  `e.preventDefault()` from running, causing native HTML form submit (page reload).
+- **i18n — static vs dynamic content**: next-intl translates UI strings (buttons, labels,
+  errors). Dynamic content from the database (client names, service names, notes) is
+  NOT translated — businesses write content in their own language from day one.
+  AI reports are generated in the correct language by passing the locale to the prompt.
+- **i18n — locale storage**: `cf-locale` cookie, not HttpOnly. Readable by client and
+  server. Falls back to `NEXT_PUBLIC_DEFAULT_LOCALE` env var if cookie absent.
+- **i18n — URL strategy**: no locale prefix in URLs (`/dashboard` not `/es/dashboard`).
+  Locale is carried by cookie only. Simpler routing, no middleware complexity.
 
 ---
 
 ## Database Schema
+
 ```prisma
 generator client {
   provider = "prisma-client"
@@ -241,7 +262,6 @@ model Report {
 
   @@index([businessId])
 }
-
 ```
 
 ---
@@ -298,7 +318,9 @@ clientflow/
 │   ├── layout/
 │   │   ├── sidebar.tsx
 │   │   ├── sidebar-nav.tsx
-│   │   └── user-menu.tsx
+│   │   ├── user-menu.tsx
+│   │   ├── locale-switcher.tsx       # NEW — flag + text language selector
+│   │   └── bfcache-guard.tsx
 │   ├── dashboard/
 │   │   ├── metric-card.tsx
 │   │   ├── visits-chart.tsx
@@ -321,6 +343,11 @@ clientflow/
 │       └── week-picker.tsx
 ├── hooks/
 │   └── use-debounce.ts
+├── i18n/
+│   └── request.ts                    # NEW — next-intl locale detection
+├── messages/
+│   ├── en.json                       # NEW — all UI strings in English
+│   └── es.json                       # NEW — all UI strings in Spanish
 ├── lib/
 │   ├── prisma.ts
 │   ├── auth.ts
@@ -344,6 +371,7 @@ BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
 GOOGLE_AI_API_KEY=
 OPENROUTER_API_KEY=
+NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per deployment
 ```
 
 ---
@@ -448,6 +476,26 @@ OPENROUTER_API_KEY=
 > Goal: fix known inconsistencies and bugs before deploy.
 
 **Tasks:**
+- [x] Fix UserMenu DropdownMenuLabel error (`MenuGroupRootContext is missing`)
+      Root cause: shadcn/ui updated DropdownMenu to use Base UI which changed
+      how DropdownMenuLabel works inside triggers. Solution: replace
+      DropdownMenuLabel with a plain div styled to match.
+- [x] Fix infinite redirect loop on sign out
+      Root cause: `router.push("/login")` is a soft navigation — browser still
+      held the session cookie in memory when middleware ran. Solution: use
+      `window.location.href` for a full HTTP request + manually clear `cf-role`
+      cookie via `document.cookie = "cf-role=; Max-Age=0; path=/"`.
+- [x] Fix login form handler not running
+      Root cause: `React.SubmitEvent` is not a valid React type. `e.preventDefault()`
+      never ran, causing native HTML form submit (page reload). Solution: use
+      `React.FormEvent<HTMLFormElement>`.
+- [x] Fix seed creating users without valid credentials
+      Root cause: `auth.api.signUpEmail` requires full HTTP context and does not
+      reliably create the Account record outside route handlers. Better Auth
+      could not verify credentials on login and created duplicate users with
+      different IDs, breaking BusinessMember lookup. Solution: rewrite seed
+      using `auth.$context.password.hash` + Prisma transaction, same pattern
+      as POST /api/employees.
 - [ ] Fix hamburger button overlap with page titles on mobile
       Root cause: inconsistent top padding across pages. Solution: enforce
       `pt-14 lg:pt-0` on every page wrapper so the hamburger (positioned
@@ -456,10 +504,6 @@ OPENROUTER_API_KEY=
       Root cause: sidebar receives user data but not business name. Solution:
       read business name in dashboard layout server component and pass as prop
       to sidebar.
-- [ ] Fix UserMenu DropdownMenuLabel error (`MenuGroupRootContext is missing`)
-      Root cause: shadcn/ui updated DropdownMenu to use Base UI which changed
-      how DropdownMenuLabel works inside triggers. Solution: replace
-      DropdownMenuLabel with a plain div styled to match.
 - [ ] Phone field format validation on client form
 - [ ] Clients table static width (notes column causes layout shift)
 - [ ] Business name in sidebar does not update after saving in Settings without
@@ -468,12 +512,55 @@ OPENROUTER_API_KEY=
 
 ---
 
-### Phase 9 — Deploy
+### Phase 9 — Internationalization (i18n)
+> Goal: full Spanish/English support. Locale chosen by user, remembered across sessions.
+
+**Stack:** next-intl (standard for Next.js App Router, works in Server + Client Components)
+
+**Design decisions:**
+- No locale prefix in URLs — `/dashboard` not `/es/dashboard`. Locale via cookie only.
+- `cf-locale` cookie, not HttpOnly — readable by both client and server.
+- Falls back to `NEXT_PUBLIC_DEFAULT_LOCALE` env var — allows different default per deployment.
+- Dynamic content (client names, service names, notes) is NOT translated — businesses
+  write in their own language from day one.
+- AI reports generated in the correct language by passing locale to the Gemini prompt.
+- Selector shows flag + text (🇺🇸 EN / 🇨🇺 ES). Available on login page and settings page.
+
+**Tasks:**
+- [x] Install next-intl
+- [x] Add `NEXT_PUBLIC_DEFAULT_LOCALE=en` to `.env.local`
+- [x] Create `messages/en.json` with all UI strings in English
+- [x] Create `messages/es.json` with all UI strings in Spanish
+- [x] Create `i18n/request.ts` — reads `cf-locale` cookie, falls back to env var
+- [x] Update `next.config.ts` — wrap with next-intl plugin
+- [x] Update root layout — wrap with `NextIntlClientProvider`
+- [x] Create `components/layout/locale-switcher.tsx` — flag + text selector,
+      sets `cf-locale` cookie via useState + useEffect, calls `window.location.reload()`
+- [x] Add locale switcher to login page
+- [x] Update login page — all strings use `t('key')`
+- [x] Update sidebar + user menu — all strings use `t('key')`
+- [x] Update dashboard page + VisitsChart + RecentVisits — all strings use `t('key')`
+- [x] Update visits page + all dialogs + filters — all strings use `t('key')`
+- [x] Update clients dialogs — all strings use `t('key')`
+- [ ] Add locale switcher to settings page
+- [ ] Update employees page + dialogs — all strings use `t('key')`
+- [ ] Update reports page — all strings use `t('key')`
+- [ ] Update settings page — all strings use `t('key')`
+- [ ] Update report prompt in `lib/prompts/report.ts` — pass locale,
+      instruct Gemini to generate in the correct language
+- [ ] Verify: changing locale on login page persists after login
+- [ ] Verify: changing locale in settings takes effect immediately
+- [ ] Verify: AI report generates in the selected language
+
+---
+
+### Phase 10 — Deploy
 > Goal: ship to production on Vercel + Neon.
 
 **Tasks:**
 - [ ] Create Neon database and get connection strings
 - [ ] Set all environment variables in Vercel dashboard
+- [ ] Set `NEXT_PUBLIC_DEFAULT_LOCALE` per deployment in Vercel env vars
 - [ ] Update DATABASE_URL and DIRECT_URL for production (sslmode=verify-full)
 - [ ] Run prisma migrate deploy on Neon
 - [ ] Create production seed (admin account only, no demo data)
@@ -524,10 +611,9 @@ The current AI usage (weekly report) is the foundation. Natural next steps:
 
 ## Current Status
 
-**Active Phase:** 8 — UI Polish & Bug Fixes
-**Last completed phase:** 7 — Settings
+**Active Phase:** 9 — Internationalization (i18n)
+**Last completed phase:** 8 (partial — auth/seed bugs fixed, remaining polish pending)
 **Last updated:** 2026-03-29
-
 ---
 
 ## Technical Notes
@@ -538,6 +624,8 @@ The current AI usage (weekly report) is the foundation. Natural next steps:
 - **middleware.ts**: uses `proxy.ts` naming for Next.js 16 Windows compatibility.
 - **Role cookie**: `cf-role` set by `/api/auth/session-init`. Not HttpOnly — client
   reads it to render admin-only UI. Authorization always enforced server-side.
+- **Locale cookie**: `cf-locale` set by `LocaleSwitcher` component. Not HttpOnly —
+  readable by both client and server middleware. Falls back to `NEXT_PUBLIC_DEFAULT_LOCALE`.
 - **Middleware route split**: `ADMIN_ONLY_PAGE_ROUTES` redirects staff to `/visits`.
   `ADMIN_ONLY_API_ROUTES` returns 403 directly.
 - **Sidebar collapse**: `useSyncExternalStore` with localStorage.
@@ -549,13 +637,47 @@ The current AI usage (weekly report) is the foundation. Natural next steps:
 - **params in Next.js 16**: params is Promise<{id}> — must await before destructuring.
 - **Visits immutability**: no PATCH on visits by design. Delete + re-enter.
 - **Employee creation**: Prisma transaction (User + Account + BusinessMember).
-  Use ctx.password.hash — never auth.api.signUpEmail (hijacks session).
+  Use ctx.password.hash — never auth.api.signUpEmail (hijacks session + unreliable
+  outside HTTP context).
+- **Seed**: same pattern as employee creation. ctx.password.hash + Prisma transaction.
+  Never auth.api.signUpEmail — does not reliably create Account with hashed credentials
+  outside route handlers, causing Better Auth to create duplicate users on login.
+- **Better Auth Account model**: credentials are stored in the Account table with
+  `providerId: "credential"` and `accountId: user.id`. A User without a matching
+  Account record cannot log in — Better Auth will create a new User instead.
+- **Sign out**: use `window.location.href = "/login"` not `router.push`. router.push
+  is soft navigation — session cookie still present in browser memory when middleware
+  runs, causing redirect loop. Also manually clear `cf-role` with document.cookie.
+- **Login form type**: `React.FormEvent<HTMLFormElement>` not `React.SubmitEvent`.
+  Wrong type silently breaks e.preventDefault(), causing native HTML form submit.
 - **Employee removal**: delete BusinessMember only, User preserved for visit history.
 - **Settings hydration**: page.tsx is Server Component, passes isAdmin + names as props
   to settings-client.tsx. Avoids cookie reading on client = no hydration mismatch.
 - **DropdownMenuLabel**: broken in current shadcn/ui version with Base UI backend.
-  Replace with plain styled div. See Phase 8 fix.
+  Replace with plain styled div.
 - **suppressHydrationWarning**: on html and body tags in root layout — browser
   extensions modify DOM before React hydrates, this suppresses false positives.
 - **react-markdown**: required for report viewer. Install with npm install react-markdown.
 - **oslo/password**: deprecated, do not use. Use auth.$context.password.hash.
+- **i18n — no URL prefix**: locale is cookie-based, not URL-based. Avoids complexity
+  in middleware routing and keeps all existing links valid.
+- **i18n — AI reports**: pass locale to Gemini prompt. Do not translate after the fact —
+  generate directly in the target language.
+- **SPEC vs real schema**: always trust the actual schema.prisma file over SPEC.md.
+  The SPEC schema can fall behind. When in doubt, read the file directly.
+  - **i18n — useTranslations vs getTranslations**: useTranslations() for Client Components,
+  getTranslations() (async) for Server Components. Wrong one causes a runtime error.
+- **i18n — dynamic keys blocked**: next-intl cannot resolve template literal keys like
+  t(`days.${index}`) at runtime. Use a locale-based array in the component instead:
+  const DAYS = { en: [...], es: [...] }; DAYS[locale][index].
+- **i18n — react-hooks/immutability**: ESLint rule from eslint-config-next blocks direct
+  mutation of document.cookie in event handlers. Solution: use useState + useEffect —
+  store the pending value in state, mutate in the effect. This is also the correct
+  React pattern regardless of the lint rule.
+- **i18n — useLocale()**: hook that returns the current locale string in Client Components.
+  Use it to pass the correct locale to toLocaleDateString() and for locale-conditional logic.
+- **i18n — day labels from API**: DAY_LABELS in /api/dashboard are hardcoded English strings.
+  Do not change the API — translate on the client using a locale-based array indexed by
+  position (API always returns 7 days Mon→Sun in order, index is reliable).
+- **i18n — date formatting**: pass locale to toLocaleDateString().
+  Use "es-CU" for Spanish (Cuba), "en-US" for English.

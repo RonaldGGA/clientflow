@@ -1,6 +1,6 @@
 "use client";
-
 import { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,10 +11,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface Visit {
   id: string;
@@ -30,52 +26,47 @@ interface DeleteVisitDialogProps {
   onSuccess: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function DeleteVisitDialog({
   visit,
   open,
   onOpenChange,
   onSuccess,
 }: DeleteVisitDialogProps) {
+  const t = useTranslations("visits");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     if (!visit) return;
-
     setLoading(true);
     setError(null);
-
     try {
-      const res = await fetch(`/api/visits/${visit.id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/visits/${visit.id}`, { method: "DELETE" });
       const json = await res.json();
-
       if (!res.ok) {
-        setError(json.error ?? "Something went wrong");
+        setError(json.error ?? tCommon("error"));
         return;
       }
-
       onSuccess();
       onOpenChange(false);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
   }
 
   const date = visit
-    ? new Date(visit.createdAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? new Date(visit.createdAt).toLocaleDateString(
+        locale === "es" ? "es-CU" : "en-US",
+        {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        },
+      )
     : "";
 
   return (
@@ -83,37 +74,40 @@ export function DeleteVisitDialog({
       <AlertDialogContent className="bg-zinc-900 border-zinc-800">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-white">
-            Delete Visit
+            {t("deleteDialog.title")}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-zinc-400">
-            This will permanently delete the visit for{" "}
-            <span className="text-white font-medium">{visit?.client.name}</span>{" "}
-            —{" "}
-            <span className="text-white font-medium">
-              {visit?.service.name}
-            </span>{" "}
-            on <span className="text-white font-medium">{date}</span>.
-            <br />
-            <br />
-            This action cannot be undone.
+            {t("deleteDialog.description")}
+            {visit && (
+              <>
+                {" "}
+                <span className="text-white font-medium">
+                  {visit.client.name}
+                </span>
+                {" — "}
+                <span className="text-white font-medium">
+                  {visit.service.name}
+                </span>{" "}
+                {locale === "es" ? "el" : "on"}{" "}
+                <span className="text-white font-medium">{date}</span>.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
-
         {error && <p className="text-sm text-red-400 px-1">{error}</p>}
-
         <AlertDialogFooter>
           <AlertDialogCancel
             disabled={loading}
             className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
           >
-            Cancel
+            {tCommon("cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             disabled={loading}
             className="bg-red-600 hover:bg-red-500 text-white"
           >
-            {loading ? "Deleting..." : "Delete Visit"}
+            {loading ? tCommon("deleting") : tCommon("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

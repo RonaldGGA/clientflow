@@ -1,10 +1,7 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import ReactMarkdown from "react-markdown";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface Report {
   id: string;
@@ -18,23 +15,26 @@ interface ReportViewerProps {
   report: Report;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function ReportViewer({ report }: ReportViewerProps) {
-  const generatedAt = new Date(report.createdAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const t = useTranslations("reports");
+  const locale = useLocale();
+
+  const generatedAt = new Date(report.createdAt).toLocaleDateString(
+    locale === "es" ? "es-CU" : "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-4">
-      <p className="text-xs text-zinc-500">Generated on {generatedAt}</p>
-
+      <p className="text-xs text-zinc-500">
+        {t("generatedOn", { date: generatedAt })}
+      </p>
       <div
         className="prose prose-invert prose-sm max-w-none
         prose-headings:text-white prose-headings:font-semibold

@@ -1,5 +1,5 @@
 "use client";
-
+import { useLocale, useTranslations } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -9,6 +9,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
+const DAYS = {
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  es: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+};
 
 interface VisitsPerDay {
   day: string;
@@ -32,29 +37,35 @@ function CustomTooltip({
   payload?: TooltipPayload[];
   label?: string;
 }) {
+  const t = useTranslations("dashboard.visitsChart");
   if (!active || !payload?.length) return null;
-
   return (
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 shadow-lg">
       <p className="text-xs text-zinc-400">{label}</p>
       <p className="text-sm font-semibold text-white">
         {payload[0].value}{" "}
-        <span className="font-normal text-zinc-400">
-          {payload[0].value === 1 ? "visit" : "visits"}
-        </span>
+        <span className="font-normal text-zinc-400">{t("label")}</span>
       </p>
     </div>
   );
 }
 
 export function VisitsChart({ data }: VisitsChartProps) {
+  const locale = useLocale();
+
+  const t = useTranslations("dashboard");
+  const translatedData = data.map((item, index) => ({
+    ...item,
+    day: DAYS[locale as keyof typeof DAYS]?.[index] ?? item.day,
+  }));
+
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
       <h2 className="mb-4 text-sm font-medium text-zinc-400">
-        Visits this week
+        {t("visitsChart.title")}
       </h2>
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} barSize={28}>
+        <BarChart data={translatedData} barSize={28}>
           <CartesianGrid
             vertical={false}
             stroke="#27272a"

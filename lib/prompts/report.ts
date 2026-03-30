@@ -22,8 +22,8 @@ export interface StaffActivity {
 
 export interface WeeklyStats {
   businessName: string;
-  weekStart: string; // e.g. "Monday, Mar 24, 2026"
-  weekEnd: string; // e.g. "Sunday, Mar 30, 2026"
+  weekStart: string;
+  weekEnd: string;
   totalVisits: number;
   totalRevenue: number;
   previousWeekVisits: number;
@@ -33,7 +33,9 @@ export interface WeeklyStats {
   staffActivity: StaffActivity[];
 }
 
-export function buildReportPrompt(stats: WeeklyStats): string {
+export function buildReportPrompt(stats: WeeklyStats, locale: string): string {
+  const language = locale === "es" ? "Spanish" : "English";
+
   const visitsDelta = stats.totalVisits - stats.previousWeekVisits;
   const revenueDelta = stats.totalRevenue - stats.previousWeekRevenue;
 
@@ -74,6 +76,8 @@ export function buildReportPrompt(stats: WeeklyStats): string {
 
   return `You are a business analyst writing a friendly, concise weekly summary for the owner of a small business called "${stats.businessName}".
 
+IMPORTANT: Write the entire report in ${language}. All section headers, sentences, and commentary must be in ${language}. The business data (names, numbers) stays as-is.
+
 Write a weekly report in clear, natural language. Be specific with numbers. Keep it professional but warm — this is a small business owner, not a Fortune 500 executive. Use markdown formatting with clear sections.
 
 ## Weekly Data: ${stats.weekStart} – ${stats.weekEnd}
@@ -101,5 +105,9 @@ Write the report now. Structure it with these markdown sections:
 5. ## Looking Ahead (1-2 actionable suggestions based on the data)
 
 Do not repeat the raw numbers table — weave the numbers into natural sentences.
-Keep the total length under 400 words.`;
+Do not explain the data point by point — provide insights and context. For example, if visits are down but revenue is up, note that the business is making more money per visit, which could be a positive sign.
+Do not use information you do not have like the business owner name
+Do not use placeholder, the response you give is shown directly to the business owner, so be sure to write the full report in the response.
+Keep the total length under 400 words.
+Remember: the full report must be written in ${language}.`;
 }

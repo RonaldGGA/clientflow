@@ -2,6 +2,7 @@
 
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ function getInitials(name: string): string {
 
 export function UserMenu({ user, isCollapsed }: UserMenuProps) {
   const router = useRouter();
+  const t = useTranslations("userMenu");
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -68,37 +70,31 @@ export function UserMenu({ user, isCollapsed }: UserMenuProps) {
           )}
         </div>
       </DropdownMenuTrigger>
-
       <DropdownMenuContent
         side="top"
         align={isCollapsed ? "center" : "start"}
         sideOffset={4}
         className="w-56 bg-zinc-900 border-zinc-800"
       >
-        {/* Replaced DropdownMenuLabel — broken in current shadcn/ui Base UI version */}
         <div className="px-2 py-1.5">
           <p className="text-sm font-medium text-white">{user.name}</p>
           <p className="text-xs text-zinc-500">{user.email}</p>
         </div>
-
         <DropdownMenuSeparator className="bg-zinc-800" />
-
         <DropdownMenuItem
           onClick={() => router.push("/settings")}
           className="gap-2 text-zinc-400 focus:text-white focus:bg-zinc-800 cursor-pointer"
         >
           <User className="h-4 w-4" />
-          Profile
+          {t("profile")}
         </DropdownMenuItem>
-
         <DropdownMenuSeparator className="bg-zinc-800" />
-
         <DropdownMenuItem
           onClick={handleSignOut}
           className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/10 cursor-pointer"
         >
           <LogOut className="h-4 w-4" />
-          Sign out
+          {t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,3 +1,6 @@
+"use client";
+import { useTranslations, useLocale } from "next-intl";
+
 interface RecentVisit {
   id: string;
   clientName: string;
@@ -10,15 +13,6 @@ interface RecentVisitsProps {
   visits: RecentVisit[];
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function formatPrice(price: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -27,30 +21,43 @@ function formatPrice(price: number): string {
 }
 
 export function RecentVisits({ visits }: RecentVisitsProps) {
+  const t = useTranslations("dashboard.recentVisits");
+  const tTable = useTranslations("visits.table");
+  const locale = useLocale();
+
+  function formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString(
+      locale === "es" ? "es-CU" : "en-US",
+      {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      },
+    );
+  }
+
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-      <h2 className="mb-4 text-sm font-medium text-zinc-400">Recent visits</h2>
-
+      <h2 className="mb-4 text-sm font-medium text-zinc-400">{t("title")}</h2>
       {visits.length === 0 ? (
-        <p className="py-8 text-center text-sm text-zinc-600">
-          No visits recorded yet
-        </p>
+        <p className="py-8 text-center text-sm text-zinc-600">{t("empty")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800">
                 <th className="pb-3 text-left font-medium text-zinc-500">
-                  Client
+                  {tTable("client")}
                 </th>
                 <th className="pb-3 text-left font-medium text-zinc-500">
-                  Service
+                  {tTable("service")}
                 </th>
                 <th className="pb-3 text-right font-medium text-zinc-500">
-                  Price
+                  {tTable("price")}
                 </th>
                 <th className="pb-3 text-right font-medium text-zinc-500">
-                  Date
+                  {tTable("date")}
                 </th>
               </tr>
             </thead>

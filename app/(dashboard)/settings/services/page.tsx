@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ServiceFormDialog } from "@/components/services/service-form-dialog";
 import { DeleteServiceDialog } from "@/components/services/delete-service-dialog";
@@ -21,10 +22,13 @@ function formatPrice(price: number): string {
 }
 
 export default function ServicesSettingsPage() {
+  const t = useTranslations("settings.services");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [formOpen, setFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -36,19 +40,17 @@ export default function ServicesSettingsPage() {
     try {
       const res = await fetch("/api/services", { credentials: "include" });
       const json = await res.json();
-
       if (!res.ok) {
-        setError(json.error ?? "Failed to load services.");
+        setError(json.error ?? tCommon("error"));
         return;
       }
-
       setServices(json.data.services);
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("error"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tCommon]);
 
   useEffect(() => {
     void fetchServices();
@@ -69,9 +71,17 @@ export default function ServicesSettingsPage() {
     setDeleteOpen(true);
   };
 
+  const serviceCountLabel =
+    services.length > 0
+      ? locale === "es"
+        ? `${services.length} servicio${services.length !== 1 ? "s" : ""} configurado${services.length !== 1 ? "s" : ""}`
+        : `${services.length} service${services.length !== 1 ? "s" : ""} configured`
+      : locale === "es"
+        ? "Configura los servicios que ofrece tu negocio"
+        : "Configure the services your business offers";
+
   return (
     <div className="mx-auto max-w-2xl flex flex-col gap-8 px-1 py-2 sm:px-0">
-      {/* Header */}
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -79,14 +89,10 @@ export default function ServicesSettingsPage() {
               <Wrench className="h-5 w-5 text-emerald-400" />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
-              Services
+              {t("title")}
             </h1>
           </div>
-          <p className="pl-11 text-sm text-zinc-500">
-            {services.length > 0
-              ? `${services.length} service${services.length !== 1 ? "s" : ""} configured`
-              : "Configure the services your business offers"}
-          </p>
+          <p className="pl-11 text-sm text-zinc-500">{serviceCountLabel}</p>
         </div>
 
         <Button
@@ -94,35 +100,37 @@ export default function ServicesSettingsPage() {
           className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-10 px-5 shrink-0"
         >
           <Plus className="h-4 w-4" />
-          New service
+          {t("addService")}
         </Button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
           <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
-      {/* Content */}
       {loading ? (
         <ServicesSkeleton />
       ) : services.length === 0 ? (
-        <EmptyState onCreate={handleCreate} />
+        <EmptyState
+          onCreate={handleCreate}
+          label={t("addService")}
+          emptyText={t("empty")}
+        />
       ) : (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800">
                 <th className="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
-                  Service
+                  {t("table.name")}
                 </th>
                 <th className="px-5 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">
-                  Base price
+                  {t("table.basePrice")}
                 </th>
                 <th className="px-5 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">
-                  Actions
+                  {t("table.actions")}
                 </th>
               </tr>
             </thead>
@@ -147,7 +155,6 @@ export default function ServicesSettingsPage() {
                         size="icon"
                         onClick={() => handleEdit(service)}
                         className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg"
-                        aria-label={`Edit ${service.name}`}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -156,7 +163,6 @@ export default function ServicesSettingsPage() {
                         size="icon"
                         onClick={() => handleDeleteClick(service)}
                         className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                        aria-label={`Delete ${service.name}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -169,7 +175,6 @@ export default function ServicesSettingsPage() {
         </div>
       )}
 
-      {/* Dialogs — key forces remount with correct initial state */}
       <ServiceFormDialog
         key={editingService ? `edit-${editingService.id}` : "create"}
         open={formOpen}
@@ -222,25 +227,27 @@ function ServicesSkeleton() {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({
+  onCreate,
+  label,
+  emptyText,
+}: {
+  onCreate: () => void;
+  label: string;
+  emptyText: string;
+}) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 py-20 gap-3 px-4 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800">
         <Wrench className="h-5 w-5 text-zinc-500" />
       </div>
-      <div className="flex flex-col gap-1">
-        <p className="font-medium text-white">No services yet</p>
-        <p className="text-sm text-zinc-500 max-w-xs">
-          Add the services your business offers — they&apos;ll be available when
-          logging visits
-        </p>
-      </div>
+      <p className="font-medium text-white">{emptyText}</p>
       <Button
         onClick={onCreate}
         className="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
       >
         <Plus className="h-4 w-4" />
-        New service
+        {label}
       </Button>
     </div>
   );
