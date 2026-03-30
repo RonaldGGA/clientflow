@@ -37,8 +37,9 @@ export const metadata: Metadata = {
     alternateLocale: "en_US",
   },
   robots: {
-    index: false,
-    follow: false,
+    //If it becomes a product,disable this
+    index: true,
+    follow: true,
   },
 };
 
