@@ -81,7 +81,9 @@
       "phone": "Teléfono",
       "phonePlaceholder": "+53 5 000 0000",
       "notes": "Notas",
-      "notesPlaceholder": "Alguna nota sobre este cliente..."
+      "notesPlaceholder": "Alguna nota sobre este cliente...",
+      "phoneInvalid": "El teléfono solo puede contener dígitos, espacios y + ( ) -",
+      "duplicate": "Ya existe un cliente con este nombre y número de teléfono."
     },
     "deleteDialog": {
       "title": "Eliminar Cliente",

@@ -81,7 +81,9 @@
       "phone": "Phone",
       "phonePlaceholder": "+1 (555) 000-0000",
       "notes": "Notes",
-      "notesPlaceholder": "Any notes about this client..."
+      "notesPlaceholder": "Any notes about this client...",
+      "phoneInvalid": "Phone can only contain digits, spaces, and + ( ) -",
+      "duplicate": "A client with this name and phone number already exists."
     },
     "deleteDialog": {
       "title": "Delete Client",
@@ -167,35 +169,35 @@
     "emptyHint": "Click \"Generate Report\" to create one.",
     "generatingHint": "This may take up to 15 seconds."
   },
-"settings": {
-  "title": "Settings",
-  "subtitle": "Manage your business and account preferences.",
-  "business": {
-    "title": "Business",
-    "subtitle": "Update your business information.",
-    "name": "Business Name",
-    "saveButton": "Save Changes",
-    "updated": "Business name updated."
-  },
-  "account": {
-    "title": "Account",
-    "subtitle": "Update your personal information and password.",
-    "profileTitle": "Profile",
-    "name": "Name",
-    "email": "Email",
-    "saveButton": "Save Changes",
-    "updated": "Profile updated."
-  },
-  "password": {
-    "title": "Change Password",
-    "current": "Current Password",
-    "new": "New Password",
-    "confirm": "Confirm New Password",
-    "saveButton": "Update Password",
-    "mismatch": "Passwords do not match.",
-    "incorrect": "Current password is incorrect.",
-    "updated": "Password updated."
-  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your business and account preferences.",
+    "business": {
+      "title": "Business",
+      "subtitle": "Update your business information.",
+      "name": "Business Name",
+      "saveButton": "Save Changes",
+      "updated": "Business name updated."
+    },
+    "account": {
+      "title": "Account",
+      "subtitle": "Update your personal information and password.",
+      "profileTitle": "Profile",
+      "name": "Name",
+      "email": "Email",
+      "saveButton": "Save Changes",
+      "updated": "Profile updated."
+    },
+    "password": {
+      "title": "Change Password",
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password",
+      "saveButton": "Update Password",
+      "mismatch": "Passwords do not match.",
+      "incorrect": "Current password is incorrect.",
+      "updated": "Password updated."
+    },
     "services": {
       "title": "Services",
       "addService": "Add Service",

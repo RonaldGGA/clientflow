@@ -34,6 +34,9 @@ interface FormData {
   notes: string;
 }
 
+// Allows: digits, spaces, +, -, (, ), [, ]
+const PHONE_REGEX = /^[+\d\s\-()\[\]]+$/;
+
 export function ClientFormDialog({
   open,
   onOpenChange,
@@ -67,6 +70,12 @@ export function ClientFormDialog({
       return;
     }
 
+    const phoneTrimmed = form.phone.trim();
+    if (phoneTrimmed && !PHONE_REGEX.test(phoneTrimmed)) {
+      setError(t("form.phoneInvalid"));
+      return;
+    }
+
     setLoading(true);
     try {
       const url = isEdit ? `/api/clients/${client!.id}` : "/api/clients";
@@ -78,14 +87,19 @@ export function ClientFormDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
-          phone: form.phone.trim() || null,
+          phone: phoneTrimmed || null,
           notes: form.notes.trim() || null,
         }),
       });
 
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? tCommon("error"));
+        // Surface duplicate error from API in the user's language
+        setError(
+          json.error === "DUPLICATE_CLIENT"
+            ? t("form.duplicate")
+            : (json.error ?? tCommon("error")),
+        );
         return;
       }
 

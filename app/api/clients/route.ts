@@ -8,25 +8,22 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
+const PHONE_REGEX = /^[+\d\s\-()\[\]]+$/;
+
 const createClientSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  phone: z.string().max(30).optional().nullable(),
+  phone: z
+    .union([
+      z.string().min(1).max(30).regex(PHONE_REGEX, "Invalid phone format"),
+      z.null(),
+    ])
+    .optional(),
   notes: z.string().max(500).optional().nullable(),
 });
 
 async function getMembership(userId: string) {
-  return prisma.businessMember.findFirst({
-    where: { userId },
-  });
+  return prisma.businessMember.findFirst({ where: { userId } });
 }
-
-// async function getAdminMembership(userId: string) {
-//   const membership = await prisma.businessMember.findFirst({
-//     where: { userId },
-//   });
-//   if (!membership || membership.role !== "admin") return null;
-//   return membership;
-// }
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,11 +126,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { name, phone, notes } = parsed.data;
+
+    // Duplicate check: same name + same phone within this business
+    const duplicate = await prisma.client.findFirst({
+      where: {
+        businessId: membership.businessId,
+        name,
+        phone: phone ?? null,
+        deletedAt: null,
+      },
+    });
+
+    if (duplicate) {
+      return NextResponse.json(
+        { data: null, error: "DUPLICATE_CLIENT" },
+        { status: 422 },
+      );
+    }
+
     const client = await prisma.client.create({
       data: {
-        name: parsed.data.name,
-        phone: parsed.data.phone ?? null,
-        notes: parsed.data.notes ?? null,
+        name,
+        phone: phone ?? null,
+        notes: notes ?? null,
         businessId: membership.businessId,
       },
       select: {
