@@ -18,7 +18,7 @@ const inter = localFont({
 export const metadata: Metadata = {
   title: {
     default: "ClientFlow",
-    template: "%s | ClientFlow",
+    template: "%s ClientFlow",
   },
   description: "Clients and services management system for small business.",
   manifest: "/site.webmanifest",

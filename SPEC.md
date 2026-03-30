@@ -514,7 +514,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
 
 ---
 
-### Phase 9 — Internationalization (i18n)
+### ✅ Phase 9 — Internationalization (i18n)
 
 > Goal: full Spanish/English support. Locale chosen by user, remembered across sessions.
 
@@ -564,12 +564,12 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
 
 **Tasks:**
 
-- [ ] Create Neon database and get connection strings
-- [ ] Set all environment variables in Vercel dashboard
-- [ ] Set `NEXT_PUBLIC_DEFAULT_LOCALE` per deployment in Vercel env vars
-- [ ] Update DATABASE_URL and DIRECT_URL for production (sslmode=verify-full)
-- [ ] Run prisma migrate deploy on Neon
-- [ ] Create production seed (admin account only, no demo data)
+- [X] Create Neon database and get connection strings
+- [X] Set all environment variables in Vercel dashboard
+- [X] Set `NEXT_PUBLIC_DEFAULT_LOCALE` per deployment in Vercel env vars
+- [X] Update DATABASE_URL and DIRECT_URL for production (sslmode=verify-full)
+- [X] Run prisma migrate deploy on Neon
+- [X] Create production seed (barbershop data)
 - [ ] Deploy to Vercel and verify all routes work
 - [ ] Verify: Better Auth cookies work on production domain
 - [ ] Verify: Gemini API key works in production environment
@@ -618,8 +618,11 @@ The current AI usage (weekly report) is the foundation. Natural next steps:
 ## Current Status
 
 **Active Phase:** 10 — Deployment
-**Last completed phase:** 8 
+
+**Last completed phase**: 10 (half)
+
 **Last updated:** 2026-03-30
+
 ---
 
 ## Technical Notes
