@@ -141,6 +141,15 @@ export async function GET() {
       createdAt: v.createdAt.toISOString(),
     }));
 
+    console.log("[dashboard] GET data:", {
+      weeklyRevenue: weeklyRevenueResult._sum.actualPrice,
+      activeClientsCount,
+      weeklyVisitsCount,
+      topService,
+      visitsPerDay,
+      recentVisits,
+    });
+
     return NextResponse.json({
       data: {
         weeklyRevenue: Number(weeklyRevenueResult._sum.actualPrice ?? 0),

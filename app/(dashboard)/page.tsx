@@ -30,7 +30,6 @@ async function getDashboardData(): Promise<DashboardData | null> {
       "http://localhost:3000";
     const res = await fetch(`${baseUrl}/api/dashboard`, {
       headers: await headers(),
-      cache: "no-store",
     });
     if (!res.ok) return null;
     const json = await res.json();
