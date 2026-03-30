@@ -13,20 +13,15 @@ export default async function DashboardLayout({
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  console.log("LAYOUT SESSION:", session?.user?.email ?? "NULL");
 
   if (!session) {
     redirect("/login");
   }
 
-  console.log("USER ID:", session.user.id);
-
   const membership = await prisma.businessMember.findFirst({
     where: { userId: session.user.id },
     include: { business: true },
   });
-
-  console.log("MEMBERSHIP:", membership?.role ?? "NULL");
 
   if (!membership) {
     redirect("/login");
@@ -42,9 +37,10 @@ export default async function DashboardLayout({
           image: session.user.image ?? null,
         }}
         role={membership.role}
+        businessName={membership.business.name}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">{children}</div>
+        <div className="pt-14 lg:pt-0 p-6">{children}</div>
       </main>
     </div>
   );

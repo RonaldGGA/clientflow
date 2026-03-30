@@ -80,7 +80,7 @@ export default function ClientsPage() {
   }, [debouncedQuery]);
 
   return (
-    <div className="mx-auto max-w-5xl flex flex-col gap-8 px-1 py-2 sm:px-0">
+    <div className="mx-auto max-w-5xl flex flex-col gap-8 p-6 sm:px-0">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">

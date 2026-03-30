@@ -10,21 +10,15 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_STORAGE_KEY = "cf-sidebar-collapsed";
 
-// ─── useSyncExternalStore plumbing ───────────────────────────────────────────
-// subscribe: called by React to listen for external changes (e.g. other tabs)
 function subscribeSidebarState(callback: () => void) {
   window.addEventListener("storage", callback);
   return () => window.removeEventListener("storage", callback);
 }
 
-// getSnapshot: called on every render on the client — reads current value
 function getSidebarSnapshot(): boolean {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
-// getServerSnapshot: called during SSR — must return the same value as the
-// initial client render to avoid hydration mismatch. localStorage doesn't
-// exist on the server, so we always return false here.
 function getSidebarServerSnapshot(): boolean {
   return false;
 }
@@ -36,9 +30,6 @@ function useSidebarCollapsed(): [boolean, (value: boolean) => void] {
     getSidebarServerSnapshot,
   );
 
-  // Write to localStorage and dispatch a storage event so useSyncExternalStore
-  // picks up the change in the same window (storage events only fire cross-tab
-  // by default).
   const setCollapsed = useCallback((value: boolean) => {
     localStorage.setItem(SIDEBAR_STORAGE_KEY, String(value));
     window.dispatchEvent(
@@ -48,7 +39,6 @@ function useSidebarCollapsed(): [boolean, (value: boolean) => void] {
 
   return [isCollapsed, setCollapsed];
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SidebarUser {
   name: string;
@@ -59,15 +49,22 @@ interface SidebarUser {
 interface SidebarProps {
   user: SidebarUser;
   role: string;
+  businessName: string;
 }
 
 interface SidebarContentProps {
   user: SidebarUser;
   role: string;
   isCollapsed: boolean;
+  businessName: string;
 }
 
-function SidebarContent({ user, role, isCollapsed }: SidebarContentProps) {
+function SidebarContent({
+  user,
+  role,
+  isCollapsed,
+  businessName,
+}: SidebarContentProps) {
   return (
     <>
       <div
@@ -78,8 +75,8 @@ function SidebarContent({ user, role, isCollapsed }: SidebarContentProps) {
       >
         <Scissors className="w-5 h-5 text-emerald-500 shrink-0" />
         {!isCollapsed && (
-          <span className="font-semibold text-white tracking-tight">
-            ClientFlow
+          <span className="font-semibold text-white tracking-tight truncate">
+            {businessName}
           </span>
         )}
       </div>
@@ -95,7 +92,7 @@ function SidebarContent({ user, role, isCollapsed }: SidebarContentProps) {
   );
 }
 
-export function Sidebar({ user, role }: SidebarProps) {
+export function Sidebar({ user, role, businessName }: SidebarProps) {
   const [isCollapsed, setCollapsed] = useSidebarCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -103,7 +100,6 @@ export function Sidebar({ user, role }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile: hamburger */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
           variant="ghost"
@@ -116,24 +112,32 @@ export function Sidebar({ user, role }: SidebarProps) {
         </Button>
       </div>
 
-      {/* Mobile: drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
           className="w-60 p-0 bg-zinc-900 border-zinc-800 flex flex-col"
         >
-          <SidebarContent user={user} role={role} isCollapsed={false} />
+          <SidebarContent
+            user={user}
+            role={role}
+            isCollapsed={false}
+            businessName={businessName}
+          />
         </SheetContent>
       </Sheet>
 
-      {/* Desktop: persistent collapsible sidebar */}
       <aside
         className={cn(
           "relative hidden lg:flex flex-col h-full bg-zinc-900 border-r border-zinc-800 transition-all duration-300 ease-in-out shrink-0",
           isCollapsed ? "w-16" : "w-60",
         )}
       >
-        <SidebarContent user={user} role={role} isCollapsed={isCollapsed} />
+        <SidebarContent
+          user={user}
+          role={role}
+          isCollapsed={isCollapsed}
+          businessName={businessName}
+        />
 
         <Button
           variant="ghost"
