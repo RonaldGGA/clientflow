@@ -9,7 +9,7 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 function getWeekRange(): { weekStart: Date; weekEnd: Date } {
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ...
+  const dayOfWeek = now.getDay();
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
   const weekStart = new Date(now);
@@ -123,8 +123,8 @@ export async function GET() {
     // Compute visitsPerDay — count visits per weekday (Mon=0 … Sun=6)
     const countPerDay: number[] = Array(7).fill(0);
     for (const visit of visitsThisWeek) {
-      const day = visit.createdAt.getDay(); // 0=Sun … 6=Sat
-      const index = day === 0 ? 6 : day - 1; // remap to Mon=0 … Sun=6
+      const day = visit.createdAt.getDay();
+      const index = day === 0 ? 6 : day - 1;
       countPerDay[index]++;
     }
     const visitsPerDay = DAY_LABELS.map((day, i) => ({

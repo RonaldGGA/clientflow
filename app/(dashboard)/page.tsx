@@ -24,17 +24,26 @@ interface DashboardData {
 
 async function getDashboardData(): Promise<DashboardData | null> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "https://clientflow-demo.vercel.app" ||
-      "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const headersList = await headers();
+
     const res = await fetch(`${baseUrl}/api/dashboard`, {
-      headers: await headers(),
+      headers: Object.fromEntries(headersList.entries()),
     });
-    if (!res.ok) return null;
+
+    if (!res.ok) {
+      console.error(
+        "[dashboard page] fetch failed:",
+        res.status,
+        await res.text(),
+      );
+      return null;
+    }
+
     const json = await res.json();
     return json.data ?? null;
-  } catch {
+  } catch (err) {
+    console.error("[dashboard page] fetch threw:", err);
     return null;
   }
 }

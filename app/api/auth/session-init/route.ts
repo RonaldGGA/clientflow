@@ -4,7 +4,7 @@ import { getServerSession } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 const ROLE_COOKIE = "cf-role";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 /**
  * Called immediately after login to persist the user's role in a cookie.
