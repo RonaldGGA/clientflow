@@ -366,6 +366,7 @@ clientflow/
 
 ```env
 DATABASE_URL="postgresql://postgres:password@localhost:5432/clientflow_dev"
+
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
@@ -472,10 +473,11 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
 
 ---
 
-### Phase 8 — UI Polish & Bug Fixes
+### ✅ Phase 8 — UI Polish & Bug Fixes
 > Goal: fix known inconsistencies and bugs before deploy.
 
 **Tasks:**
+
 - [x] Fix UserMenu DropdownMenuLabel error (`MenuGroupRootContext is missing`)
       Root cause: shadcn/ui updated DropdownMenu to use Base UI which changed
       how DropdownMenuLabel works inside triggers. Solution: replace
@@ -496,28 +498,30 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
       different IDs, breaking BusinessMember lookup. Solution: rewrite seed
       using `auth.$context.password.hash` + Prisma transaction, same pattern
       as POST /api/employees.
-- [ ] Fix hamburger button overlap with page titles on mobile
+- [X] Fix hamburger button overlap with page titles on mobile
       Root cause: inconsistent top padding across pages. Solution: enforce
       `pt-14 lg:pt-0` on every page wrapper so the hamburger (positioned
       `top-4 left-4`, `lg:hidden`) always has space on mobile.
-- [ ] Fix business name in sidebar showing "ClientFlow" instead of actual name
+- [X] Fix business name in sidebar showing "ClientFlow" instead of actual name
       Root cause: sidebar receives user data but not business name. Solution:
       read business name in dashboard layout server component and pass as prop
       to sidebar.
-- [ ] Phone field format validation on client form
-- [ ] Clients table static width (notes column causes layout shift)
-- [ ] Business name in sidebar does not update after saving in Settings without
+- [X] Phone field format validation on client form
+- [X] Clients table static width (notes column causes layout shift)
+- [X] Business name in sidebar does not update after saving in Settings without
       a full page reload. Requires router.refresh() after successful PATCH
       or a shared server state solution.
 
 ---
 
 ### Phase 9 — Internationalization (i18n)
+
 > Goal: full Spanish/English support. Locale chosen by user, remembered across sessions.
 
 **Stack:** next-intl (standard for Next.js App Router, works in Server + Client Components)
 
 **Design decisions:**
+
 - No locale prefix in URLs — `/dashboard` not `/es/dashboard`. Locale via cookie only.
 - `cf-locale` cookie, not HttpOnly — readable by both client and server.
 - Falls back to `NEXT_PUBLIC_DEFAULT_LOCALE` env var — allows different default per deployment.
@@ -527,6 +531,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
 - Selector shows flag + text (🇺🇸 EN / 🇨🇺 ES). Available on login page and settings page.
 
 **Tasks:**
+
 - [x] Install next-intl
 - [x] Add `NEXT_PUBLIC_DEFAULT_LOCALE=en` to `.env.local`
 - [x] Create `messages/en.json` with all UI strings in English
@@ -542,22 +547,23 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en   # "en" or "es" — controls default language per
 - [x] Update dashboard page + VisitsChart + RecentVisits — all strings use `t('key')`
 - [x] Update visits page + all dialogs + filters — all strings use `t('key')`
 - [x] Update clients dialogs — all strings use `t('key')`
-- [ ] Add locale switcher to settings page
-- [ ] Update employees page + dialogs — all strings use `t('key')`
-- [ ] Update reports page — all strings use `t('key')`
-- [ ] Update settings page — all strings use `t('key')`
-- [ ] Update report prompt in `lib/prompts/report.ts` — pass locale,
+- [x] Update employees page + dialogs — all strings use `t('key')`
+- [x] Update reports page — all strings use `t('key')`
+- [x] Update settings page — all strings use `t('key')`
+- [x] Update report prompt in `lib/prompts/report.ts` — pass locale,
       instruct Gemini to generate in the correct language
-- [ ] Verify: changing locale on login page persists after login
-- [ ] Verify: changing locale in settings takes effect immediately
-- [ ] Verify: AI report generates in the selected language
+- [x] Verify: changing locale on login page persists after login
+- [x] Verify: changing locale in settings takes effect immediately
+- [x] Verify: AI report generates in the selected language
 
 ---
 
 ### Phase 10 — Deploy
+
 > Goal: ship to production on Vercel + Neon.
 
 **Tasks:**
+
 - [ ] Create Neon database and get connection strings
 - [ ] Set all environment variables in Vercel dashboard
 - [ ] Set `NEXT_PUBLIC_DEFAULT_LOCALE` per deployment in Vercel env vars
@@ -611,9 +617,9 @@ The current AI usage (weekly report) is the foundation. Natural next steps:
 
 ## Current Status
 
-**Active Phase:** 9 — Internationalization (i18n)
-**Last completed phase:** 8 (partial — auth/seed bugs fixed, remaining polish pending)
-**Last updated:** 2026-03-29
+**Active Phase:** 10 — Deployment
+**Last completed phase:** 8 
+**Last updated:** 2026-03-30
 ---
 
 ## Technical Notes

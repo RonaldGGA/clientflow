@@ -55,6 +55,7 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     fetchMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleEdit(member: Member) {

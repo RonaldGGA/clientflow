@@ -162,7 +162,7 @@ async function callOpenRouter(prompt: string): Promise<string> {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct:free",
+        model: "openrouter/free",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 1024,
       }),

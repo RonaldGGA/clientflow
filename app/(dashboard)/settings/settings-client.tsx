@@ -85,6 +85,7 @@ function BusinessSection({ initialName }: { initialName: string }) {
       setBusinessName(draft.trim());
       setEditing(false);
       succeed();
+      window.location.reload();
     } catch {
       fail(tCommon("error"));
     }
