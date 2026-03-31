@@ -16,6 +16,14 @@
 
 ---
 
+<div align="center">
+
+**[→ Live Demo](https://clientflow-demo.vercel.app)** — click "Try demo" to enter instantly
+
+![ClientFlow Dashboard](./public/screenshot-dashboard.png)
+
+</div>
+
 ## The Problem
 
 Running a barbershop, clinic, repair shop, or salon means juggling clients, staff, services, and revenue — often on paper, in spreadsheets, or across disconnected apps. Tracking who came in, what they paid, and how the week performed shouldn't require a degree in software.
@@ -157,8 +165,8 @@ npx prisma db seed
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | `admin@demo.com` | `admin1234` |
-| Staff | `staff@demo.com` | `staff1234` |
+| Admin | `admin@clientflow.demo` | `admin1234` |
+| Staff | `carlos@clientflow.demo` | `staff1234` |
 
 ### Run Locally
 
