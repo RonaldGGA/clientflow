@@ -84,7 +84,7 @@ export default function ClientsPage() {
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg">
               <Users className="h-5 w-5 text-emerald-400" />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-white">

@@ -1,4 +1,5 @@
 "use client";
+
 import { useTranslations, useLocale } from "next-intl";
 
 interface RecentVisit {
@@ -38,8 +39,9 @@ export function RecentVisits({ visits }: RecentVisitsProps) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 transition-all duration-200 hover:border-zinc-700">
       <h2 className="mb-4 text-sm font-medium text-zinc-400">{t("title")}</h2>
+
       {visits.length === 0 ? (
         <p className="py-8 text-center text-sm text-zinc-600">{t("empty")}</p>
       ) : (
@@ -50,28 +52,39 @@ export function RecentVisits({ visits }: RecentVisitsProps) {
                 <th className="pb-3 text-left font-medium text-zinc-500">
                   {tTable("client")}
                 </th>
-                <th className="pb-3 text-left font-medium text-zinc-500">
+                {/* Service column hidden on mobile — too cramped with 4 cols */}
+                <th className="pb-3 text-left font-medium text-zinc-500 hidden sm:table-cell">
                   {tTable("service")}
                 </th>
                 <th className="pb-3 text-right font-medium text-zinc-500">
                   {tTable("price")}
                 </th>
-                <th className="pb-3 text-right font-medium text-zinc-500">
+                {/* Date column hidden on mobile */}
+                <th className="pb-3 text-right font-medium text-zinc-500 hidden sm:table-cell">
                   {tTable("date")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {visits.map((visit) => (
-                <tr key={visit.id} className="group">
+                <tr
+                  key={visit.id}
+                  className="group transition-colors hover:bg-zinc-800/40"
+                >
                   <td className="py-3 font-medium text-white">
                     {visit.clientName}
+                    {/* On mobile show service below the name in muted text */}
+                    <span className="block text-xs text-zinc-500 font-normal sm:hidden mt-0.5">
+                      {visit.serviceName}
+                    </span>
                   </td>
-                  <td className="py-3 text-zinc-400">{visit.serviceName}</td>
+                  <td className="py-3 text-zinc-400 hidden sm:table-cell">
+                    {visit.serviceName}
+                  </td>
                   <td className="py-3 text-right font-medium text-emerald-400">
                     {formatPrice(visit.actualPrice)}
                   </td>
-                  <td className="py-3 text-right text-zinc-500">
+                  <td className="py-3 text-right text-zinc-500 hidden sm:table-cell">
                     {formatDate(visit.createdAt)}
                   </td>
                 </tr>

@@ -128,7 +128,7 @@ export function Sidebar({ user, role, businessName }: SidebarProps) {
 
       <aside
         className={cn(
-          "relative hidden lg:flex flex-col h-full bg-zinc-900 border-r border-zinc-800 transition-all duration-300 ease-in-out shrink-0",
+          "relative hidden lg:flex flex-col h-full bg-zinc-900/50 border-r border-zinc-800 transition-all duration-300 ease-in-out shrink-0",
           isCollapsed ? "w-16" : "w-60",
         )}
       >

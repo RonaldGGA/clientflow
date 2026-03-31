@@ -26,11 +26,9 @@ async function getDashboardData(): Promise<DashboardData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const headersList = await headers();
-
     const res = await fetch(`${baseUrl}/api/dashboard`, {
       headers: Object.fromEntries(headersList.entries()),
     });
-
     if (!res.ok) {
       console.error(
         "[dashboard page] fetch failed:",
@@ -39,7 +37,6 @@ async function getDashboardData(): Promise<DashboardData | null> {
       );
       return null;
     }
-
     const json = await res.json();
     return json.data ?? null;
   } catch (err) {
@@ -57,6 +54,11 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Metric cards with their stagger delays.
+// Each card enters 75ms after the previous one —
+// like dominoes falling in slow motion.
+const CARD_DELAYS = ["0ms", "75ms", "150ms", "225ms"] as const;
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
@@ -66,48 +68,69 @@ export default async function DashboardPage() {
 
   if (!data) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="flex h-64 items-center justify-center cf-fade-up">
         <p className="text-sm text-zinc-500">{t("error")}</p>
       </div>
     );
   }
 
+  const metrics = [
+    {
+      label: t("metrics.weeklyRevenue"),
+      value: formatCurrency(data.weeklyRevenue),
+      icon: DollarSign,
+      description: t("metrics.weeklyRevenueDesc"),
+      accent: true,
+    },
+    {
+      label: t("metrics.activeClients"),
+      value: data.activeClients,
+      icon: Users,
+      description: t("metrics.activeClientsDesc"),
+    },
+    {
+      label: t("metrics.weeklyVisits"),
+      value: data.weeklyVisits,
+      icon: CalendarCheck,
+      description: t("metrics.weeklyVisitsDesc"),
+    },
+    {
+      label: t("metrics.topService"),
+      value: data.topService ?? "—",
+      icon: Scissors,
+      description: t("metrics.topServiceDesc"),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
+      <div className="cf-fade-up" style={{ animationDelay: "0ms" }}>
         <h1 className="text-xl font-semibold text-white">{t("title")}</h1>
         <p className="mt-1 text-sm text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label={t("metrics.weeklyRevenue")}
-          value={formatCurrency(data.weeklyRevenue)}
-          icon={DollarSign}
-          description={t("metrics.weeklyRevenueDesc")}
-          accent
-        />
-        <MetricCard
-          label={t("metrics.activeClients")}
-          value={data.activeClients}
-          icon={Users}
-          description={t("metrics.activeClientsDesc")}
-        />
-        <MetricCard
-          label={t("metrics.weeklyVisits")}
-          value={data.weeklyVisits}
-          icon={CalendarCheck}
-          description={t("metrics.weeklyVisitsDesc")}
-        />
-        <MetricCard
-          label={t("metrics.topService")}
-          value={data.topService ?? "—"}
-          icon={Scissors}
-          description={t("metrics.topServiceDesc")}
-        />
+        {metrics.map((metric, i) => (
+          <div
+            key={metric.label}
+            className="cf-fade-up"
+            style={{ animationDelay: CARD_DELAYS[i] }}
+          >
+            <MetricCard
+              label={metric.label}
+              value={metric.value}
+              icon={metric.icon}
+              description={metric.description}
+              accent={metric.accent}
+            />
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div
+        className="grid grid-cols-1 gap-4 lg:grid-cols-2 cf-fade-up"
+        style={{ animationDelay: "300ms" }}
+      >
         <VisitsChart data={data.visitsPerDay} />
         <RecentVisits visits={data.recentVisits} />
       </div>
