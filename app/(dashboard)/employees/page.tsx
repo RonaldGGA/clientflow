@@ -102,7 +102,7 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-zinc-800 overflow-hidden">
+      <div className="rounded-lg border bg-zinc-900 border-zinc-800 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-transparent">

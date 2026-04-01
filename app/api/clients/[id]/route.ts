@@ -29,6 +29,108 @@ async function findClientForBusiness(id: string, businessId: string) {
   });
 }
 
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) {
+      return NextResponse.json(
+        { data: null, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const membership = await prisma.businessMember.findFirst({
+      where: { userId: session.user.id },
+    });
+    if (!membership) {
+      return NextResponse.json(
+        { data: null, error: "No business membership" },
+        { status: 403 },
+      );
+    }
+
+    const { id } = await params;
+
+    const client = await prisma.client.findFirst({
+      where: {
+        id,
+        businessId: membership.businessId,
+        deletedAt: null,
+      },
+      include: {
+        visits: {
+          include: {
+            service: { select: { name: true } },
+            staff: { select: { name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { data: null, error: "Client not found" },
+        { status: 404 },
+      );
+    }
+
+    const totalVisits = client.visits.length;
+    const totalSpend = client.visits.reduce(
+      (sum, v) => sum + Number(v.actualPrice),
+      0,
+    );
+    const lastVisit =
+      client.visits.length > 0 ? client.visits[0].createdAt : null;
+
+    const serviceCounts: Record<string, number> = {};
+    for (const v of client.visits) {
+      const name = v.service.name;
+      serviceCounts[name] = (serviceCounts[name] ?? 0) + 1;
+    }
+    const favoriteService =
+      Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    return NextResponse.json({
+      data: {
+        client: {
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          notes: client.notes,
+          createdAt: client.createdAt.toISOString(),
+          aiSummary: client.aiSummary ?? null,
+          aiSummaryAt: client.aiSummaryAt?.toISOString() ?? null,
+        },
+        stats: {
+          totalVisits,
+          totalSpend,
+          lastVisit: lastVisit?.toISOString() ?? null,
+          favoriteService,
+        },
+        visits: client.visits.map((v) => ({
+          id: v.id,
+          serviceName: v.service.name,
+          staffName: v.staff.name ?? "Unknown",
+          actualPrice: Number(v.actualPrice),
+          notes: v.notes,
+          createdAt: v.createdAt.toISOString(),
+        })),
+      },
+      error: null,
+    });
+  } catch (err) {
+    console.error("[clients/[id]] GET error:", err);
+    return NextResponse.json(
+      { data: null, error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

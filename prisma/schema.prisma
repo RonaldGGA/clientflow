@@ -105,14 +105,16 @@ model Verification {
 }
 
 model Client {
-  id         String    @id @default(cuid())
-  name       String
-  phone      String?
-  notes      String?
-  businessId String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  id          String    @id @default(cuid())
+  name        String
+  phone       String?
+  notes       String?
+  aiSummary   String?
+  businessId  String
+  aiSummaryAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   visits   Visit[]

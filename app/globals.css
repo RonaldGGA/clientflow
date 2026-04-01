@@ -21,13 +21,6 @@ html {
 }
 
 body {
-  /*
-    Two radial gradients layered on top of the base background:
-    - Top-right: emerald glow, very faint (7% opacity)
-    - Bottom-left: emerald glow, even fainter (5% opacity)
-    Result: a living, atmospheric dark background instead of flat black.
-    Both gradients are large ellipses so the transition is very gradual.
-  */
   background:
     radial-gradient(
       ellipse 55% 45% at 95% 2%,
@@ -49,14 +42,6 @@ body {
 * {
   border-color: var(--border);
 }
-
-/* ─── Animations ────────────────────────────────────────────────────────────
-   cf-fade-up: fades in + slides up 8px.
-   8px is subtle enough that it feels natural, not dramatic.
-   0.35s is fast enough to not feel slow, slow enough to be visible.
-   "both" fill-mode: element starts invisible and stays visible after.
-   Use animationDelay via inline style to create stagger effects.
-*/
 @keyframes cf-fade-up {
   from {
     opacity: 0;

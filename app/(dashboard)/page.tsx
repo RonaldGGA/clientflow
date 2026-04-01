@@ -54,9 +54,6 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Metric cards with their stagger delays.
-// Each card enters 75ms after the previous one —
-// like dominoes falling in slow motion.
 const CARD_DELAYS = ["0ms", "75ms", "150ms", "225ms"] as const;
 
 export default async function DashboardPage() {

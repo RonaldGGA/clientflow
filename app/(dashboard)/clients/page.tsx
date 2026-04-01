@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
@@ -13,6 +14,7 @@ import {
   Phone,
   StickyNote,
   Users,
+  ChevronRight,
 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -34,6 +36,7 @@ interface Pagination {
 export default function ClientsPage() {
   const t = useTranslations("clients");
   const tCommon = useTranslations("common");
+  const router = useRouter();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -75,6 +78,7 @@ export default function ClientsPage() {
   useEffect(() => {
     void fetchClients();
   }, [fetchClients]);
+
   useEffect(() => {
     setPage(1);
   }, [debouncedQuery]);
@@ -151,22 +155,22 @@ export default function ClientsPage() {
                     <th className="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 hidden md:table-cell">
                       {t("table.notes")}
                     </th>
-                    <th className="px-5 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">
-                      {t("table.actions")}
-                    </th>
+                    <th className="px-5 py-3.5 w-28" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/70">
                   {clients.map((client) => (
                     <tr
                       key={client.id}
-                      className="hover:bg-zinc-800/40 transition-colors group"
+                      onClick={() => router.push(`/clients/${client.id}`)}
+                      className="hover:bg-zinc-800/40 transition-colors group cursor-pointer"
                     >
                       <td className="px-5 py-4">
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-white group-hover:text-emerald-400 transition-colors">
                           {client.name}
                         </span>
                       </td>
+
                       <td className="px-5 py-4 hidden sm:table-cell">
                         {client.phone ? (
                           <span className="flex items-center gap-2 text-zinc-400">
@@ -177,6 +181,7 @@ export default function ClientsPage() {
                           <span className="text-zinc-700">—</span>
                         )}
                       </td>
+
                       <td className="px-5 py-4 hidden md:table-cell max-w-55">
                         {client.notes ? (
                           <span className="flex items-center gap-2 text-zinc-400">
@@ -187,16 +192,19 @@ export default function ClientsPage() {
                           <span className="text-zinc-700">—</span>
                         )}
                       </td>
+
                       <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Edit + Delete fade in on hover */}
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation(); // don't navigate
                               setEditingClient(client);
                               setFormOpen(true);
                             }}
-                            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg"
+                            className="h-8 w-8 text-zinc-600 hover:text-white hover:bg-zinc-700 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label={`${tCommon("edit")} ${client.name}`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -204,15 +212,22 @@ export default function ClientsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation(); // don't navigate
                               setDeletingClient(client);
                               setDeleteOpen(true);
                             }}
-                            className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                            className="h-8 w-8 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label={`${tCommon("delete")} ${client.name}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
+                          {/*
+                            ChevronRight is ALWAYS visible — it's the affordance
+                            that signals "this row navigates somewhere".
+                            On hover it shifts right 2px and turns emerald.
+                          */}
+                          <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all ml-1" />
                         </div>
                       </td>
                     </tr>

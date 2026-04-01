@@ -167,7 +167,7 @@
     "lastWeek": "Last week",
     "empty": "No report generated for this week yet.",
     "emptyHint": "Click \"Generate Report\" to create one.",
-    "generatingHint": "This may take up to 15 seconds."
+    "generatingHint": "This may take up to 30 seconds."
   },
   "settings": {
     "title": "Settings",
